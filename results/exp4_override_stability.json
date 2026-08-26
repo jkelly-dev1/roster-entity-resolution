@@ -1,0 +1,84 @@
+{
+  "ingest1": {
+    "clusters": 20030,
+    "rows": 74926
+  },
+  "ingest1_plus_2": {
+    "clusters": 19997,
+    "rows": 79745
+  },
+  "input_manifest_sha256": "7138eba2ffd9da7af6ee017edd029acd1ac298698ae1c74c5fac3dfc56317df4",
+  "misapplied_examples": [
+    {
+      "cluster_id": 1262,
+      "intended_provider": 1308,
+      "kind": "split",
+      "landed_on_provider": 1307,
+      "shares_no_row_with_the_original": true
+    },
+    {
+      "cluster_id": 1511,
+      "intended_provider": 1564,
+      "kind": "split",
+      "landed_on_provider": 1563,
+      "shares_no_row_with_the_original": true
+    },
+    {
+      "cluster_id": 1647,
+      "intended_provider": 1708,
+      "kind": "split",
+      "landed_on_provider": 1707,
+      "shares_no_row_with_the_original": true
+    },
+    {
+      "cluster_id": 1676,
+      "intended_provider": 1737,
+      "kind": "split",
+      "landed_on_provider": 1736,
+      "shares_no_row_with_the_original": true
+    },
+    {
+      "cluster_id": 1841,
+      "intended_provider": 1909,
+      "kind": "split",
+      "landed_on_provider": 1908,
+      "shares_no_row_with_the_original": true
+    }
+  ],
+  "new_rows_in_second_ingest": 4819,
+  "overrides": {
+    "merge": 200,
+    "pin": 100,
+    "split": 200,
+    "total": 500
+  },
+  "pins_contradicted_by_a_corrected_source_row": 39,
+  "predictions": {
+    "cluster_id_keying_misapplies": {
+      "claim": "keying an override on a cluster id applies at least one of them to a provider it was never about",
+      "misapplied": 271,
+      "verdict": "held"
+    },
+    "overrides_survive_reingest": {
+      "claim": "human overrides survive a re-ingest under both keying schemes",
+      "verdict": "REFUTED"
+    }
+  },
+  "replay": {
+    "cluster_id": {
+      "lost": 0,
+      "misapplied": 271,
+      "misapplied_to_unrelated_cluster": 271,
+      "retained": 229
+    },
+    "natural_key": {
+      "lost": 0,
+      "misapplied": 0,
+      "misapplied_to_unrelated_cluster": 0,
+      "retained": 500
+    }
+  },
+  "run1_cluster_ids_pointing_at_a_different_set": 18005,
+  "run1_clusters_with_changed_membership": 4527,
+  "threshold": 8.382
+}

@@ -1,0 +1,234 @@
+{
+  "clusters_scored": 19839,
+  "clusters_skipped_as_welded": 191,
+  "clusters_total": 20030,
+  "field_accuracy": {
+    "first_non_null": {
+      "city": 0.992389,
+      "credential": 0.962549,
+      "first_name": 0.553959,
+      "last_name": 0.944453,
+      "network_status": 0.940219,
+      "npi": 0.987147,
+      "phone": 0.988507,
+      "specialty": 1.0,
+      "state": 0.999849,
+      "street": 0.87333,
+      "suite": 0.916024,
+      "zip": 0.874842
+    },
+    "majority_vote": {
+      "city": 0.992389,
+      "credential": 0.990826,
+      "first_name": 0.583396,
+      "last_name": 0.971874,
+      "network_status": 0.940219,
+      "npi": 0.987147,
+      "phone": 0.988255,
+      "specialty": 1.0,
+      "state": 0.999748,
+      "street": 0.957206,
+      "suite": 0.930087,
+      "zip": 0.957609
+    },
+    "most_recent": {
+      "city": 0.992389,
+      "credential": 0.956248,
+      "first_name": 0.542215,
+      "last_name": 0.944654,
+      "network_status": 0.940219,
+      "npi": 0.987147,
+      "phone": 0.976007,
+      "specialty": 1.0,
+      "state": 0.997984,
+      "street": 0.880286,
+      "suite": 0.91804,
+      "zip": 0.881446
+    },
+    "source_priority": {
+      "city": 0.992389,
+      "credential": 0.995514,
+      "first_name": 0.965724,
+      "last_name": 0.965321,
+      "network_status": 0.940219,
+      "npi": 0.987147,
+      "phone": 0.952518,
+      "specialty": 1.0,
+      "state": 0.999849,
+      "street": 0.95035,
+      "suite": 0.939664,
+      "zip": 0.950754
+    }
+  },
+  "field_accuracy_single_site_providers_only": {
+    "first_non_null": {
+      "city": 0.992023,
+      "credential": 0.964969,
+      "first_name": 0.554252,
+      "last_name": 0.94491,
+      "network_status": 0.937626,
+      "npi": 0.99052,
+      "phone": 0.992023,
+      "specialty": 1.0,
+      "state": 0.999942,
+      "street": 0.878143,
+      "suite": 0.933753,
+      "zip": 0.879473
+    },
+    "majority_vote": {
+      "city": 0.992023,
+      "credential": 0.993063,
+      "first_name": 0.590265,
+      "last_name": 0.972311,
+      "network_status": 0.937626,
+      "npi": 0.99052,
+      "phone": 0.992023,
+      "specialty": 1.0,
+      "state": 0.999827,
+      "street": 0.959131,
+      "suite": 0.9478,
+      "zip": 0.959477
+    },
+    "most_recent": {
+      "city": 0.992023,
+      "credential": 0.959073,
+      "first_name": 0.543095,
+      "last_name": 0.945373,
+      "network_status": 0.937626,
+      "npi": 0.99052,
+      "phone": 0.992023,
+      "specialty": 1.0,
+      "state": 0.998266,
+      "street": 0.895659,
+      "suite": 0.938494,
+      "zip": 0.896757
+    },
+    "source_priority": {
+      "city": 0.992023,
+      "credential": 0.997977,
+      "first_name": 0.968437,
+      "last_name": 0.965952,
+      "network_status": 0.937626,
+      "npi": 0.99052,
+      "phone": 0.992023,
+      "specialty": 1.0,
+      "state": 0.999942,
+      "street": 0.989537,
+      "suite": 0.964738,
+      "zip": 0.989595
+    }
+  },
+  "golden_fields_written": 227755,
+  "input_manifest_sha256": "7138eba2ffd9da7af6ee017edd029acd1ac298698ae1c74c5fac3dfc56317df4",
+  "lineage_fields_checked": 227755,
+  "lineage_violations": 0,
+  "mean_accuracy": {
+    "first_non_null": 0.919439,
+    "majority_vote": 0.941563,
+    "most_recent": 0.918053,
+    "source_priority": 0.969954
+  },
+  "mean_accuracy_single_site": {
+    "first_non_null": 0.922303,
+    "majority_vote": 0.944505,
+    "most_recent": 0.924076,
+    "source_priority": 0.982364
+  },
+  "operating_point": "cost_optimal_10_to_1",
+  "per_field_priority": {
+    "city": [
+      "payer_feed",
+      "site_scrape",
+      "clearinghouse"
+    ],
+    "credential": [
+      "license_board",
+      "payer_feed",
+      "clearinghouse"
+    ],
+    "first_name": [
+      "license_board",
+      "payer_feed",
+      "clearinghouse",
+      "site_scrape"
+    ],
+    "last_name": [
+      "license_board",
+      "site_scrape",
+      "payer_feed",
+      "clearinghouse"
+    ],
+    "network_status": [
+      "payer_feed"
+    ],
+    "npi": [
+      "clearinghouse",
+      "payer_feed",
+      "license_board",
+      "site_scrape"
+    ],
+    "phone": [
+      "payer_feed",
+      "site_scrape",
+      "clearinghouse"
+    ],
+    "specialty": [
+      "license_board",
+      "payer_feed",
+      "clearinghouse",
+      "site_scrape"
+    ],
+    "state": [
+      "license_board",
+      "site_scrape",
+      "clearinghouse",
+      "payer_feed"
+    ],
+    "street": [
+      "payer_feed",
+      "site_scrape",
+      "clearinghouse"
+    ],
+    "suite": [
+      "payer_feed",
+      "site_scrape",
+      "clearinghouse"
+    ],
+    "zip": [
+      "payer_feed",
+      "site_scrape",
+      "clearinghouse"
+    ]
+  },
+  "prediction": {
+    "best_strategy": "source_priority",
+    "claim": "majority vote is the best general survivorship strategy, measured as mean field-level accuracy across all fields",
+    "mean_accuracy": {
+      "first_non_null": 0.919439,
+      "majority_vote": 0.941563,
+      "most_recent": 0.918053,
+      "source_priority": 0.969954
+    },
+    "verdict": "REFUTED"
+  },
+  "providers_listed_twice_by_a_source": 2517,
+  "providers_who_moved": 2404,
+  "single_site_majority_beats_priority": [
+    "last_name"
+  ],
+  "single_site_priority_beats_majority": [
+    "credential",
+    "first_name",
+    "state",
+    "street",
+    "suite",
+    "zip"
+  ],
+  "strategies": [
+    "first_non_null",
+    "most_recent",
+    "majority_vote",
+    "source_priority"
+  ],
+  "threshold": 8.382
+}

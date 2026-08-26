@@ -1,0 +1,58 @@
+# Postgres 17 on one machine. One service, no cloud account.
+#
+# The credentials below are local-only and deliberate. Postgres needs a
+# password to start and the scripts need the same one to reach it. The port is
+# bound to loopback. They are fixtures, not secrets.
+#
+# The port is deliberately unusual. Postgres's own default of 5432 is one of
+# the most commonly occupied ports on a developer machine, and a script that
+# silently connects to a DIFFERENT Postgres would load 71,000 rows into
+# somebody else's database. Nothing here uses a default port.
+#
+# The project name is explicit, and it has to be. Compose derives the project
+# name from the CONTAINING DIRECTORY when you do not set one, and this file
+# lives in a directory called stack/. Two unrelated projects that both keep
+# their compose file in stack/ therefore share one project namespace: bringing
+# this one up treats the other one's containers as orphans, and taking this one
+# down removes them, volumes and all.
+name: roster-entity-resolution
+
+services:
+  postgres:
+    image: postgres:17.6-bookworm
+    container_name: reg-postgres
+    environment:
+      POSTGRES_USER: roster-local
+      POSTGRES_PASSWORD: roster-local-secret
+      POSTGRES_DB: roster
+      # Deterministic collation. Sort order decides which row a blocking key
+      # groups with, and a database that collates differently produces
+      # different candidate pairs from identical input.
+      POSTGRES_INITDB_ARGS: "--locale=C --encoding=UTF8"
+    command:
+      - postgres
+      # The blocking experiment reads query plans, and a default shared_buffers
+      # of 128 MB makes every plan a disk plan on a table that fits in memory.
+      # 512 MB is stated here so the plans in the results came from a
+      # configuration a reader can reproduce rather than from this machine's.
+      - -c
+      - shared_buffers=512MB
+      - -c
+      - work_mem=64MB
+      - -c
+      - max_parallel_workers_per_gather=2
+      # Every EXPLAIN ANALYZE in the results was captured with timing on.
+      - -c
+      - track_io_timing=on
+    ports:
+      - "127.0.0.1:55433:5432"
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U roster-local -d roster"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  pg-data:

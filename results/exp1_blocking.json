@@ -1,0 +1,308 @@
+{
+  "all_possible_pairs": 2806915275,
+  "blockable_by_source": [
+    {
+      "can_block_on_npi": 19403,
+      "can_block_on_phone": 19403,
+      "can_block_on_soundex": 19403,
+      "can_block_on_zip": 19403,
+      "rows": 19403,
+      "source_system": "clearinghouse"
+    },
+    {
+      "can_block_on_npi": 13771,
+      "can_block_on_phone": 0,
+      "can_block_on_soundex": 19617,
+      "can_block_on_zip": 0,
+      "rows": 19617,
+      "source_system": "license_board"
+    },
+    {
+      "can_block_on_npi": 17360,
+      "can_block_on_phone": 20498,
+      "can_block_on_soundex": 20498,
+      "can_block_on_zip": 20498,
+      "rows": 20498,
+      "source_system": "payer_feed"
+    },
+    {
+      "can_block_on_npi": 3054,
+      "can_block_on_phone": 15408,
+      "can_block_on_soundex": 15408,
+      "can_block_on_zip": 15408,
+      "rows": 15408,
+      "source_system": "site_scrape"
+    }
+  ],
+  "ingest_batches": "1",
+  "input_manifest_sha256": "7138eba2ffd9da7af6ee017edd029acd1ac298698ae1c74c5fac3dfc56317df4",
+  "prediction": {
+    "claim": "exact NPI blocking alone retains at least 95 percent of true pairs, so the other strategies are not needed",
+    "measured": 0.4747,
+    "threshold": 0.95,
+    "verdict": "REFUTED"
+  },
+  "query_plans": {
+    "full_batch_no_index": {
+      "exec_ms": 20.536,
+      "nodes": [
+        "Finalize Aggregate",
+        "Gather",
+        "Partial Aggregate",
+        "Parallel Hash Join",
+        "Parallel Seq Scan",
+        "Parallel Hash",
+        "Parallel Seq Scan"
+      ],
+      "plan": [
+        " Finalize Aggregate  (cost=6308.93..6308.94 rows=1 width=8) (actual time=18.241..20.451 rows=1 loops=1)",
+        "   Buffers: shared hit=3234",
+        "   ->  Gather  (cost=6308.82..6308.93 rows=1 width=8) (actual time=18.051..20.448 rows=2 loops=1)",
+        "         Workers Planned: 1",
+        "         Workers Launched: 1",
+        "         Buffers: shared hit=3234",
+        "         ->  Partial Aggregate  (cost=5308.82..5308.83 rows=1 width=8) (actual time=16.746..16.747 rows=1 loops=2)",
+        "               Buffers: shared hit=3234",
+        "               ->  Parallel Hash Join  (cost=2435.52..5255.99 rows=21131 width=0) (actual time=7.674..16.102 rows=25506 loops=2)",
+        "                     Hash Cond: (b.npi = a.npi)",
+        "                     Join Filter: (ROW(a.source_system, a.source_row_id) < ROW(b.source_system, b.source_row_id))",
+        "                     Rows Removed by Join Filter: 52300",
+        "                     Buffers: shared hit=3234",
+        "                     ->  Parallel Seq Scan on blocking_input b  (cost=0.00..2040.74 rows=44074 width=27) (actual time=0.007..2.130 rows=37463 loops=2)",
+        "                           Buffers: shared hit=1600",
+        "                     ->  Parallel Hash  (cost=2040.74..2040.74 rows=31582 width=27) (actual time=7.434..7.435 rows=26794 loops=2)",
+        "                           Buckets: 65536  Batches: 1  Memory Usage: 3904kB",
+        "                           Buffers: shared hit=1600",
+        "                           ->  Parallel Seq Scan on blocking_input a  (cost=0.00..2040.74 rows=31582 width=27) (actual time=0.009..3.354 rows=26794 loops=2)",
+        "                                 Filter: (npi IS NOT NULL)",
+        "                                 Rows Removed by Filter: 10669",
+        "                                 Buffers: shared hit=1600",
+        " Planning:",
+        "   Buffers: shared hit=111",
+        " Planning Time: 0.344 ms",
+        " Execution Time: 20.536 ms"
+      ]
+    },
+    "full_batch_with_index": {
+      "exec_ms": 20.14,
+      "nodes": [
+        "Finalize Aggregate",
+        "Gather",
+        "Partial Aggregate",
+        "Parallel Hash Join",
+        "Parallel Seq Scan",
+        "Parallel Hash",
+        "Parallel Seq Scan"
+      ],
+      "plan": [
+        " Finalize Aggregate  (cost=6299.68..6299.69 rows=1 width=8) (actual time=18.757..20.064 rows=1 loops=1)",
+        "   Buffers: shared hit=3234",
+        "   ->  Gather  (cost=6299.57..6299.68 rows=1 width=8) (actual time=18.753..20.061 rows=2 loops=1)",
+        "         Workers Planned: 1",
+        "         Workers Launched: 1",
+        "         Buffers: shared hit=3234",
+        "         ->  Partial Aggregate  (cost=5299.57..5299.58 rows=1 width=8) (actual time=16.971..16.973 rows=1 loops=2)",
+        "               Buffers: shared hit=3234",
+        "               ->  Parallel Hash Join  (cost=2433.98..5247.40 rows=20865 width=0) (actual time=7.834..16.331 rows=25506 loops=2)",
+        "                     Hash Cond: (b.npi = a.npi)",
+        "                     Join Filter: (ROW(a.source_system, a.source_row_id) < ROW(b.source_system, b.source_row_id))",
+        "                     Rows Removed by Join Filter: 52300",
+        "                     Buffers: shared hit=3234",
+        "                     ->  Parallel Seq Scan on blocking_input b  (cost=0.00..2040.74 rows=44074 width=27) (actual time=0.007..2.077 rows=37463 loops=2)",
+        "                           Buffers: shared hit=1600",
+        "                     ->  Parallel Hash  (cost=2040.74..2040.74 rows=31459 width=27) (actual time=7.526..7.526 rows=26794 loops=2)",
+        "                           Buckets: 65536  Batches: 1  Memory Usage: 3904kB",
+        "                           Buffers: shared hit=1600",
+        "                           ->  Parallel Seq Scan on blocking_input a  (cost=0.00..2040.74 rows=31459 width=27) (actual time=0.010..3.446 rows=26794 loops=2)",
+        "                                 Filter: (npi IS NOT NULL)",
+        "                                 Rows Removed by Filter: 10669",
+        "                                 Buffers: shared hit=1600",
+        " Planning:",
+        "   Buffers: shared hit=212 read=7",
+        "   I/O Timings: shared read=0.078",
+        " Planning Time: 0.647 ms",
+        " Execution Time: 20.140 ms"
+      ]
+    },
+    "incremental_no_index": {
+      "1000": {
+        "exec_ms": 9.986,
+        "nodes": [
+          "Aggregate",
+          "Hash Join",
+          "Seq Scan",
+          "Hash",
+          "Seq Scan"
+        ],
+        "plan": [
+          " Aggregate  (cost=2719.75..2719.76 rows=1 width=8) (actual time=9.929..9.932 rows=1 loops=1)",
+          "   Buffers: shared hit=1632",
+          "   ->  Hash Join  (cost=54.50..2712.74 rows=2801 width=0) (actual time=0.237..9.866 rows=2687 loops=1)",
+          "         Hash Cond: (n.npi = p.npi)",
+          "         Buffers: shared hit=1632",
+          "         ->  Seq Scan on blocking_input n  (cost=0.00..2349.26 rows=74926 width=11) (actual time=0.014..5.271 rows=74926 loops=1)",
+          "               Buffers: shared hit=1600",
+          "         ->  Hash  (cost=42.00..42.00 rows=1000 width=11) (actual time=0.208..0.210 rows=1000 loops=1)",
+          "               Buckets: 1024  Batches: 1  Memory Usage: 50kB",
+          "               Buffers: shared hit=32",
+          "               ->  Seq Scan on incoming_row p  (cost=0.00..42.00 rows=1000 width=11) (actual time=0.010..0.127 rows=1000 loops=1)",
+          "                     Filter: (npi IS NOT NULL)",
+          "                     Buffers: shared hit=32",
+          " Planning:",
+          "   Buffers: shared hit=111",
+          " Planning Time: 0.336 ms",
+          " Execution Time: 9.986 ms"
+        ]
+      },
+      "50": {
+        "exec_ms": 7.443,
+        "nodes": [
+          "Aggregate",
+          "Hash Join",
+          "Seq Scan",
+          "Hash",
+          "Seq Scan"
+        ],
+        "plan": [
+          " Aggregate  (cost=2635.11..2635.12 rows=1 width=8) (actual time=7.403..7.406 rows=1 loops=1)",
+          "   Buffers: shared hit=1602",
+          "   ->  Hash Join  (cost=3.12..2634.76 rows=140 width=0) (actual time=0.081..7.400 rows=131 loops=1)",
+          "         Hash Cond: (n.npi = p.npi)",
+          "         Buffers: shared hit=1602",
+          "         ->  Seq Scan on blocking_input n  (cost=0.00..2349.26 rows=74926 width=11) (actual time=0.010..4.523 rows=74926 loops=1)",
+          "               Buffers: shared hit=1600",
+          "         ->  Hash  (cost=2.50..2.50 rows=50 width=11) (actual time=0.017..0.018 rows=50 loops=1)",
+          "               Buckets: 1024  Batches: 1  Memory Usage: 11kB",
+          "               Buffers: shared hit=2",
+          "               ->  Seq Scan on incoming_row p  (cost=0.00..2.50 rows=50 width=11) (actual time=0.007..0.010 rows=50 loops=1)",
+          "                     Filter: (npi IS NOT NULL)",
+          "                     Buffers: shared hit=2",
+          " Planning:",
+          "   Buffers: shared hit=111",
+          " Planning Time: 0.247 ms",
+          " Execution Time: 7.443 ms"
+        ]
+      }
+    },
+    "incremental_with_index": {
+      "1000": {
+        "exec_ms": 11.355,
+        "nodes": [
+          "Aggregate",
+          "Hash Join",
+          "Seq Scan",
+          "Hash",
+          "Seq Scan"
+        ],
+        "plan": [
+          " Aggregate  (cost=2719.58..2719.59 rows=1 width=8) (actual time=11.284..11.288 rows=1 loops=1)",
+          "   Buffers: shared hit=1632",
+          "   ->  Hash Join  (cost=54.50..2712.61 rows=2788 width=0) (actual time=0.289..11.203 rows=2687 loops=1)",
+          "         Hash Cond: (n.npi = p.npi)",
+          "         Buffers: shared hit=1632",
+          "         ->  Seq Scan on blocking_input n  (cost=0.00..2349.26 rows=74926 width=11) (actual time=0.018..6.190 rows=74926 loops=1)",
+          "               Buffers: shared hit=1600",
+          "         ->  Hash  (cost=42.00..42.00 rows=1000 width=11) (actual time=0.255..0.257 rows=1000 loops=1)",
+          "               Buckets: 1024  Batches: 1  Memory Usage: 50kB",
+          "               Buffers: shared hit=32",
+          "               ->  Seq Scan on incoming_row p  (cost=0.00..42.00 rows=1000 width=11) (actual time=0.011..0.148 rows=1000 loops=1)",
+          "                     Filter: (npi IS NOT NULL)",
+          "                     Buffers: shared hit=32",
+          " Planning:",
+          "   Buffers: shared hit=203",
+          " Planning Time: 0.594 ms",
+          " Execution Time: 11.355 ms"
+        ]
+      },
+      "50": {
+        "exec_ms": 0.717,
+        "nodes": [
+          "Aggregate",
+          "Merge Join",
+          "Index Only Scan using idx_blk_npi",
+          "Sort",
+          "Seq Scan"
+        ],
+        "plan": [
+          " Aggregate  (cost=345.82..345.83 rows=1 width=8) (actual time=0.678..0.678 rows=1 loops=1)",
+          "   Buffers: shared hit=1176 read=7",
+          "   I/O Timings: shared read=0.022",
+          "   ->  Merge Join  (cost=194.26..345.47 rows=139 width=0) (actual time=0.397..0.673 rows=131 loops=1)",
+          "         Merge Cond: (n.npi = p.npi)",
+          "         Buffers: shared hit=1176 read=7",
+          "         I/O Timings: shared read=0.022",
+          "         ->  Index Only Scan using idx_blk_npi on blocking_input n  (cost=0.29..8126.19 rows=74926 width=11) (actual time=0.018..0.539 rows=2938 loops=1)",
+          "               Heap Fetches: 2938",
+          "               Buffers: shared hit=1174 read=7",
+          "               I/O Timings: shared read=0.022",
+          "         ->  Sort  (cost=3.91..4.04 rows=50 width=11) (actual time=0.018..0.027 rows=130 loops=1)",
+          "               Sort Key: p.npi",
+          "               Sort Method: quicksort  Memory: 25kB",
+          "               Buffers: shared hit=2",
+          "               ->  Seq Scan on incoming_row p  (cost=0.00..2.50 rows=50 width=11) (actual time=0.004..0.008 rows=50 loops=1)",
+          "                     Filter: (npi IS NOT NULL)",
+          "                     Buffers: shared hit=2",
+          " Planning:",
+          "   Buffers: shared hit=203",
+          " Planning Time: 0.400 ms",
+          " Execution Time: 0.717 ms"
+        ]
+      }
+    }
+  },
+  "source_rows": 74926,
+  "stored_union_pairs": 3614341,
+  "strategies": [
+    {
+      "candidate_pairs": 51013,
+      "note": "the strongest identifier in the data, where it is present at all",
+      "pair_completeness": 0.4747,
+      "precision_of_blocking": 1.0,
+      "reduction_ratio": 0.999982,
+      "seconds": 0.1,
+      "strategy": "npi_exact",
+      "true_pairs_found": 51013
+    },
+    {
+      "candidate_pairs": 48412,
+      "note": "same ZIP and the first four characters of the surname",
+      "pair_completeness": 0.3692,
+      "precision_of_blocking": 0.819425,
+      "reduction_ratio": 0.999983,
+      "seconds": 0.2,
+      "strategy": "zip_surname4",
+      "true_pairs_found": 39670
+    },
+    {
+      "candidate_pairs": 3610478,
+      "note": "surname soundex and state, which is the only strategy a row with no address can take part in",
+      "pair_completeness": 0.9549,
+      "precision_of_blocking": 0.02842,
+      "reduction_ratio": 0.998714,
+      "seconds": 0.6,
+      "strategy": "soundex_state",
+      "true_pairs_found": 102608
+    },
+    {
+      "candidate_pairs": 45926,
+      "note": "the practice telephone number, digits only",
+      "pair_completeness": 0.4273,
+      "precision_of_blocking": 0.999804,
+      "reduction_ratio": 0.999984,
+      "seconds": 0.1,
+      "strategy": "phone_exact",
+      "true_pairs_found": 45917
+    },
+    {
+      "candidate_pairs": 3614341,
+      "note": "any of the four above",
+      "pair_completeness": 0.9878,
+      "precision_of_blocking": 0.029369,
+      "reduction_ratio": 0.998712,
+      "seconds": 0.8,
+      "strategy": "union",
+      "true_pairs_found": 106150
+    }
+  ],
+  "true_pairs": 107459
+}

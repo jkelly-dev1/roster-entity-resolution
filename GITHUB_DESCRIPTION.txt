@@ -1,0 +1,1 @@
+Record linkage over four disagreeing provider rosters: entity resolution with field-level lineage, per-field source priority, and a human override layer. The matching threshold is a cost decision, not a tuning parameter -- what a false match costs against a missed one, and whether an override survives the next file.
