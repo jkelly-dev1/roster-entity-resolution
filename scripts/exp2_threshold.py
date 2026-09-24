@@ -20,7 +20,7 @@ Four things are measured here:
      from the other.
   2. The cost-optimal threshold at each ratio, against the F1-optimal one.
   3. What a two-threshold review band buys, and where widening it stops paying.
-  4. CLUSTER DAMAGE. A false pair does not cost one error: connected
+  4. Cluster damage. A false pair does not cost one error: connected
      components weld two whole providers together, so one bad link can merge
      eleven rows about two different doctors. That is the number a pairwise
      precision figure hides.
@@ -345,6 +345,24 @@ def sweep(scores, labels, total_true_eval, grid):
                 "recall rose from %.6f to %.6f as the threshold rose from "
                 "%.3f to %.3f" % (out[i - 1]["recall"], out[i]["recall"],
                                   out[i - 1]["threshold"], out[i]["threshold"]))
+    # The curve must also actually move, which the loop above cannot see.
+    # This function's ordering exists to prevent a grid walked upward: tp and
+    # fp are running totals, so the first and lowest threshold would accept
+    # everything and every row after it would repeat those same counts. The
+    # result would be one point printed 201 times, and a constant curve has recall
+    # that never rises, never falls, and never trips a single clause of the
+    # monotonicity check above. It is an entirely plausible table in which
+    # every threshold performs identically, and the only thing that
+    # distinguishes it from a real sweep is that the ends are the same.
+    if len(out) > 1 and (out[0]["tp"], out[0]["fp"]) == (out[-1]["tp"],
+                                                         out[-1]["fp"]):
+        raise AssertionError(
+            "the curve is one point repeated %d times: threshold %.3f and "
+            "threshold %.3f both report tp=%d fp=%d. A sweep whose ends agree "
+            "accepted the same pairs at every threshold, which is what a grid "
+            "walked in the wrong direction produces."
+            % (len(out), out[0]["threshold"], out[-1]["threshold"],
+               out[0]["tp"], out[0]["fp"]))
     return out
 
 
@@ -418,14 +436,21 @@ def main():
     del pending
 
     # ---- the evaluation half only -----------------------------------------
+    # ev_multi MARKS THE PAIRS NO PAIRWISE RESOLVER CAN BE RIGHT ABOUT. A
+    # site_scrape row naming two providers has one address, one phone and one
+    # specialty, and they belong to the first name on it; the second name is a
+    # passenger. schema.sql and normalize.py both promise these are reported
+    # separately rather than left to move precision quietly. They are counted
+    # here and written into the results file.
     ev_scores, ev_labels, ev_a, ev_b = array("f"), bytearray(), array("i"), array("i")
-    ev_multi = 0
+    ev_multi = bytearray()
     for i in range(n_pairs):
         if eval_mask[i]:
             ev_scores.append(scores[i])
             ev_labels.append(labels[i])
             ev_a.append(a_idx[i])
             ev_b.append(b_idx[i])
+            ev_multi.append(1 if (multi[a_idx[i]] or multi[b_idx[i]]) else 0)
 
     total_true_eval = int(lab.scalar("""
         SELECT coalesce(sum(k * (k - 1) / 2), 0) FROM (
@@ -611,9 +636,42 @@ def main():
     pred_b_held = (at_10["welded_provider_share"]
                    > at_10.get("false_pair_share_of_accepted", 0.0))
 
+    # ---- the multi-provider rows, reported rather than absorbed -----------
+    op_threshold = costs["10"]["cost_optimal"]["threshold"]
+    acc = acc_multi = acc_multi_false = acc_false = 0
+    for i in range(len(ev_scores)):
+        if ev_scores[i] >= op_threshold:
+            acc += 1
+            if not ev_labels[i]:
+                acc_false += 1
+            if ev_multi[i]:
+                acc_multi += 1
+                if not ev_labels[i]:
+                    acc_multi_false += 1
+    multi_report = {
+        "rows": int(sum(multi)),
+        "eval_pairs_touching_one": int(sum(ev_multi)),
+        "priced_at_ratio": "10",
+        "operating_threshold": op_threshold,
+        "accepted_at_the_operating_point": acc_multi,
+        "accepted_and_false_at_the_operating_point": acc_multi_false,
+        "share_of_all_accepted_false_they_account_for": round(
+            acc_multi_false / float(acc_false), 6) if acc_false else 0.0,
+    }
+    print()
+    print("multi-provider rows (one line, two doctors): %d"
+          % multi_report["rows"])
+    print("  evaluation pairs touching one: %d of %d"
+          % (multi_report["eval_pairs_touching_one"], len(ev_scores)))
+    print("  accepted at the 10:1 operating point: %d, of which %d are false"
+          % (acc_multi, acc_multi_false))
+    print("  they are %.2f%% of the false pairs accepted there"
+          % (100.0 * multi_report["share_of_all_accepted_false_they_account_for"]))
+
     payload = {
         "pairs_scored": n_pairs,
         "eval_pairs_scored": len(ev_scores),
+        "multi_provider": multi_report,
         "eval_true_pairs_scored": scored_true_eval,
         "eval_true_pairs_total": total_true_eval,
         "recall_ceiling_from_blocking": round(

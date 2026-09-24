@@ -40,7 +40,9 @@ def test_a_scraped_credential_suffix_is_stripped_from_the_name():
 def test_a_row_naming_two_providers_resolves_to_the_first_of_them():
     # The row's address and phone belong to the first name on it. Nothing
     # downstream can be right about the second, and results/exp2_threshold.json
-    # reports those rows separately rather than absorbing them into precision.
+    # reports those rows separately rather than absorbing them into precision:
+    # its `multi_provider` block, asserted by
+    # test_results_invariants.py::test_multi_provider_rows_are_reported_separately.
     raw = "Barb Silva, DO and Elena Patel, MD"
     assert normalize.split_persons(raw) == ["Barb Silva, DO", "Elena Patel, MD"]
     assert normalize.parse_name("site_scrape", raw) == ("BARB", "SILVA")

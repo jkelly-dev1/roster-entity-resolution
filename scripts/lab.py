@@ -64,9 +64,19 @@ def query_json(sql):
     Postgres serializes, not psql: a text-mode parse would guess at NULL
     against the empty string, and this repository has columns where the
     difference between "absent" and "blank" is the measurement.
+
+    The newline before `) t;` is required. Without it the closing paren
+    and semicolon would be appended directly after the caller's last
+    character. A `--` line comment runs to the end of its line, and the most
+    carefully commented queries in this repository end in one (the comment
+    explaining why an ORDER BY must never be removed goes under the ORDER BY),
+    so the comment would swallow the wrapper's closing paren and Postgres
+    would report "syntax error at end of input". The tests and the README
+    checker read the committed results, not the script, so
+    tests/test_query_wrapping.py tests the wrapper itself.
     """
     wrapped = ("SELECT coalesce(json_agg(t), '[]'::json)::text "
-               "FROM (%s) t;" % sql.rstrip().rstrip(";"))
+               "FROM (%s\n) t;" % sql.rstrip().rstrip(";"))
     return json.loads(scalar(wrapped))
 
 

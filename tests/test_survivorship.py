@@ -44,8 +44,8 @@ def test_most_recent_breaks_a_tie_on_the_data_and_not_on_dict_ordering():
 
 
 def test_majority_vote_returns_the_popular_name_and_not_the_legal_one():
-    # (mutation-checked: this is the case that makes majority_vote's
-    # first_name accuracy 0.58 in results/exp3_survivorship.json)
+    # This is the case that makes majority_vote's first_name accuracy 0.58
+    # in results/exp3_survivorship.json.
     assert surv.pick_majority(CLUSTER)[0] == "BARB"
 
 

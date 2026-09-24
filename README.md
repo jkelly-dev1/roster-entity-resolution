@@ -15,11 +15,16 @@ file, never out of the prose, and every prediction was recorded before its run.
 The refuted ones are still in the code.
 
 What you need to run it: one Postgres container and Python 3.11 or later.
-Nothing else. `docker compose up -d` starts a single Postgres 17 bound to
-loopback, and the whole pipeline takes about two minutes. There is no corpus to
-download and no cloud account: the rosters are a pure function of a seed, so a
-clone reproduces the same 74,926 rows byte for byte. The test suite needs
-neither Docker nor Postgres.
+Nothing else to install. `docker compose up -d` starts a single Postgres 17
+bound to loopback, and the whole pipeline takes about two minutes. There is no
+corpus to download and no cloud account: the rosters are a pure function of a
+seed, so a clone reproduces the same 74,926 rows byte for byte. The test suite
+needs neither Docker nor Postgres.
+
+Give it about 3 GB of free memory. The last step replays the clustering over
+both ingests and holds 4.1 million candidate pairs in Python dicts, which
+measured a peak of 2.2 GB here. The other three experiments peak at 0.9 GB or
+below.
 
 The four questions this repository answers:
 
@@ -216,7 +221,7 @@ components are transitive. Measured over the evaluation half:
 There is a cliff and the chosen threshold sits well clear of it. At the 10:1
 operating point the worst cluster holds two providers, and it still holds two
 four points lower. It first reaches six at -3.000, about eleven points below the
-operating point, four rows down the table, and by -8.000 a single cluster is
+operating point, three rows up the table, and by -8.000 a single cluster is
 about fifteen different doctors. The share of accepted pairs that are false
 rises by a factor of 47 between the operating point and -8.000, while the worst
 wrong merge grows from two providers to fifteen. At -20.000 a single cluster is
@@ -382,10 +387,13 @@ going back to the source rows. A mechanism that is right 46 percent of the time
 by accident is harder to fix than one that fails outright.
 
 The contrast is the result. Only 4,527 of the 20,030 clusters, 23 percent,
-genuinely gained or lost a row. But 18,005 of them, 90 percent, now have a
-different member set sitting at their old id. A cluster id is assigned by the
-run: one new row early in the ordering renumbers everything after it. A 23
-percent change in the data was enough to move four times as many ids.
+genuinely gained or lost a row. But 18,005 of them, 90 percent, no longer hold
+the set they held: 17,972 of them hold a different member set at that id, and
+33 hold no cluster at all, because the second run ends with 33 fewer clusters
+than the first and nothing is left at the ids on the end. A cluster id is
+assigned by the run: one new row early in the ordering renumbers everything
+after it. A 23 percent change in the data was enough to move four times as many
+ids.
 
 ### The overrides that are now stale
 
@@ -435,7 +443,7 @@ Rows carrying a published number are mutation-checked and say so.
 | Claim | Test |
 | --- | --- |
 | Jaro-Winkler matches the values published for it, including on a transposition | `tests/test_comparators.py::test_jaro_winkler_matches_the_published_value_for_martha_and_marhta` |
-| The prefix boost cannot push a similarity above 1 (mutation-checked: raise max_prefix to 8 and the guard fires) | `tests/test_comparators.py::test_jaro_winkler_never_exceeds_one_for_a_long_shared_prefix` |
+| The prefix boost cannot push a similarity above 1 (mutation-checked: raise max_prefix to 11 and the guard fires; the test runs that mutation rather than describing it) | `tests/test_comparators.py::test_jaro_winkler_never_exceeds_one_for_a_long_shared_prefix` |
 | A missing field is MISSING and not a disagreement (mutation-checked: return DISAGREE in cmp_street and the license board's street weight collapses) | `tests/test_comparators.py::test_a_missing_field_is_missing_and_not_a_disagreement` |
 | A nickname matches its legal name only because of the table (mutation-checked: drop the table and the pair scores DISAGREE) | `tests/test_comparators.py::test_a_nickname_agrees_with_its_legal_name_only_with_the_table` |
 | Every spelling of a street type folds to one token (mutation-checked: remove PKWY and the scraped form fails) | `tests/test_normalization.py::test_every_spelling_of_a_street_type_folds_to_one_token` |
@@ -447,13 +455,15 @@ Rows carrying a published number are mutation-checked and say so.
 | A typo never touches the first character, so soundex blocking is measured rather than assumed | `tests/test_generator.py::test_a_typo_never_touches_the_first_character` |
 | The clearinghouse is the freshest file and carries the stalest address | `tests/test_generator.py::test_the_clearinghouse_is_the_freshest_file_and_the_stalest_address` |
 | The license board ships no address and no phone at all | `tests/test_generator.py::test_the_license_board_ships_no_address_and_no_phone_at_all` |
-| No blocking strategy finds more true pairs than exist (mutation-checked: unparenthesize the union clause and completeness reads 2.6973) | `tests/test_results_invariants.py::test_no_strategy_finds_more_true_pairs_than_exist` |
+| No blocking strategy finds more true pairs than exist (mutation-checked: unparenthesize the union clause and completeness reads 2.6634, measured against this tree on 2026-09-14) | `tests/test_results_invariants.py::test_no_strategy_finds_more_true_pairs_than_exist` |
 | The union is at least as complete as any strategy inside it | `tests/test_results_invariants.py::test_the_union_is_at_least_as_complete_as_any_strategy_in_it` |
 | NPI blocking alone was predicted sufficient and was refuted | `tests/test_results_invariants.py::test_npi_blocking_alone_was_predicted_sufficient_and_was_refuted` |
 | The license board can never block on an address or a phone | `tests/test_results_invariants.py::test_the_license_board_can_never_block_on_an_address_or_a_phone` |
-| The index is measured against a genuinely unindexed plan (mutation-checked: unqualify the DROP and the unindexed probe reads 0.4 ms against a true 8.6 ms) | `tests/test_results_invariants.py::test_an_index_is_measured_against_a_genuinely_unindexed_plan` |
+| The index is measured against a genuinely unindexed plan (mutation-checked: unqualify the DROP and all four indexes survive it in silence, so the "unindexed" probe is measured with an index in place: 0.717 ms where the true unindexed plan reads 7.443 ms) | `tests/test_results_invariants.py::test_an_index_is_measured_against_a_genuinely_unindexed_plan` |
 | The full-batch join is not helped by an index | `tests/test_results_invariants.py::test_the_full_batch_join_is_not_helped_by_an_index` |
-| Recall never rises as the threshold rises (mutation-checked: walk the grid ascending and the whole curve collapses to one point) | `tests/test_results_invariants.py::test_recall_never_rises_as_the_threshold_rises` |
+| Recall never rises as the threshold rises | `tests/test_results_invariants.py::test_recall_never_rises_as_the_threshold_rises` |
+| The curve is a sweep and not one point repeated, which a monotonicity check cannot see because a constant curve never rises | `tests/test_results_invariants.py::test_the_curve_is_not_one_point_repeated` |
+| The sweep refuses a curve that is one point repeated (mutation-checked: walk the grid ascending and every row collapses onto the accept-everything point, so sweep() raises before a results file is written) | `tests/test_sweep.py::test_sweep_accepts_a_grid_that_actually_straddles_the_scores` |
 | Recall is capped by what blocking kept | `tests/test_results_invariants.py::test_recall_is_capped_by_what_blocking_kept` |
 | False negatives include the pairs blocking never emitted | `tests/test_results_invariants.py::test_false_negatives_include_the_pairs_blocking_never_emitted` |
 | The weights were fitted on a disjoint half of the providers | `tests/test_results_invariants.py::test_the_weights_were_fitted_on_a_disjoint_half_of_the_providers` |

@@ -16,8 +16,8 @@ import pytest
 
 def test_no_strategy_finds_more_true_pairs_than_exist(exp1):
     # (mutation-checked: drop the parentheses around the strategy clause in
-    # exp1's join and the union emits every pair twice, which reported a pair
-    # completeness of 2.6973)
+    # exp1's join and the union emits every pair twice, which reports a pair
+    # completeness of 2.6634, measured against this tree on 2026-09-14)
     for s in exp1["strategies"]:
         assert s["true_pairs_found"] <= exp1["true_pairs"]
         assert s["true_pairs_found"] <= s["candidate_pairs"]
@@ -85,15 +85,67 @@ def test_the_full_batch_join_is_not_helped_by_an_index(exp1):
 # ---------------------------------------------------------------------------
 
 def test_recall_never_rises_as_the_threshold_rises(exp2):
-    # (mutation-checked: walk the grid ascending in sweep() and every row
-    # collapses onto the accept-everything point, which reported an F1 of
-    # 0.0579 as the optimum)
+    # A grid walked ascending in sweep() collapses every row onto the
+    # accept-everything point. sweep() refuses that curve before a results
+    # file is written, and tests/test_sweep.py runs that edit.
     curve = exp2["curve"]
     for a, b in zip(curve, curve[1:]):
         assert b["threshold"] > a["threshold"]
         assert b["recall"] <= a["recall"] + 1e-9
         assert b["tp"] <= a["tp"]
         assert b["fp"] <= a["fp"]
+
+
+def test_the_curve_is_not_one_point_repeated(exp2):
+    """The collapse that the monotonicity test above cannot see.
+
+    Walking the grid upward makes tp and fp (running totals) accept everything
+    at the first and lowest threshold and then report those same counts for
+    every threshold after it. The curve is then constant, and a constant curve
+    satisfies every clause of test_recall_never_rises_as_the_threshold_rises:
+    recall never rises, tp never rises, fp never rises. The only clause a
+    collapse trips is the `threshold` ordering, and only in the variant that
+    also drops the reverse.
+
+    What distinguishes a collapsed curve from a swept one is that its ends
+    agree. Asserted here, and in sweep() itself so a run fails before it
+    writes a results file instead of after.
+    """
+    curve = exp2["curve"]
+    assert len(curve) > 1
+    ends = ((curve[0]["tp"], curve[0]["fp"]), (curve[-1]["tp"], curve[-1]["fp"]))
+    assert ends[0] != ends[1], (
+        "threshold %.3f and threshold %.3f report the same tp and fp, so the "
+        "sweep accepted the same pairs at every threshold"
+        % (curve[0]["threshold"], curve[-1]["threshold"]))
+    # More than two distinct points, so not two ends around a flat middle.
+    assert len({(r["tp"], r["fp"]) for r in curve}) > 2
+
+
+def test_multi_provider_rows_are_reported_separately(exp2):
+    """The promise made in schema.sql and normalize.py, given something to read.
+
+    A site_scrape row naming two providers is about two people and carries one
+    address, one phone and one specialty. No pairwise resolver can be right
+    about it, and both of those files say the results report such rows
+    separately "rather than letting them move precision quietly". This holds
+    the results file to that sentence.
+    """
+    m = exp2["multi_provider"]
+    assert m["rows"] > 0, (
+        "no multi-provider rows at all, so the claim in sql/schema.sql and "
+        "scripts/normalize.py is about a case this data does not contain")
+    # They must be a MINORITY, or "quietly" is the wrong word and the headline
+    # precision is mostly a statement about rows nobody could resolve.
+    assert m["eval_pairs_touching_one"] < exp2["eval_pairs_scored"] * 0.5
+    assert 0 <= m["accepted_and_false_at_the_operating_point"] \
+        <= m["accepted_at_the_operating_point"]
+    assert m["accepted_at_the_operating_point"] <= m["eval_pairs_touching_one"]
+    # The share is a share, and it is of the false pairs accepted, which is the
+    # quantity the promise is about.
+    assert 0.0 <= m["share_of_all_accepted_false_they_account_for"] <= 1.0
+    assert m["operating_threshold"] == \
+        exp2["cost_optimal"][m["priced_at_ratio"]]["cost_optimal"]["threshold"]
 
 
 def test_recall_is_capped_by_what_blocking_kept(exp2):
@@ -312,11 +364,20 @@ def test_a_small_change_in_the_data_renumbers_almost_every_cluster(exp4):
     # comparing member sets and the changed-membership figure becomes the
     # renumbering, which destroys the contrast this result rests on)
     changed = exp4["run1_clusters_with_changed_membership"]
-    renumbered = exp4["run1_cluster_ids_pointing_at_a_different_set"]
+    renumbered = exp4["run1_cluster_ids_no_longer_holding_their_original_set"]
     total = exp4["ingest1"]["clusters"]
     assert changed < total * 0.25
     assert renumbered > total * 0.85
     assert renumbered > changed * 3
+    # The headline is the sum of two different things, which the prose has to
+    # keep apart. Run 2 holds fewer clusters than run 1, so some run-1 ids have
+    # no counterpart at all, and calling those "a different member set at the
+    # old id" would describe an id that holds nothing.
+    different = exp4["run1_cluster_ids_pointing_at_a_different_set"]
+    absent = exp4["run1_cluster_ids_with_no_cluster_at_that_id"]
+    assert different + absent == renumbered
+    assert absent == exp4["ingest1"]["clusters"] - exp4["ingest1_plus_2"]["clusters"] \
+        or absent > 0
 
 
 def test_the_second_ingest_only_adds_rows(exp4):
@@ -465,9 +526,20 @@ def test_natural_key_misapplication_is_structurally_impossible_not_measured(exp4
     nk = exp4["replay"]["natural_key"]
     assert nk["misapplied"] == 0
     assert nk["retained"] + nk["lost"] == exp4["overrides"]["total"]
-    # And `lost` is zero because of the SCENARIO, not the scheme: batch 2 only
+    # `lost` is zero because of the SCENARIO, not the scheme: batch 2 only
     # adds rows, so every batch-1 key still resolves.
-    assert exp4["new_rows_in_second_ingest"] > 0 and \
-        exp4["ingest1_plus_2"]["rows"] > exp4["ingest1"]["rows"], (
-        "the second ingest no longer only adds rows, so `lost 0` is no longer "
-        "guaranteed by the scenario and this test asserts the wrong thing")
+    #
+    # Asserted as an identity, not as two inequalities. `new_rows > 0 and
+    # rows(1+2) > rows(1)` would be satisfied by a refresh that retired 1,000
+    # batch-1 rows while adding 4,819, which destroys the property the comment
+    # above claims: a retired batch-1 row is a natural key that no longer
+    # resolves, which is exactly `lost`. Only the sum can tell "added 4,819"
+    # from "added 5,819 and dropped 1,000".
+    assert exp4["new_rows_in_second_ingest"] > 0
+    assert (exp4["ingest1_plus_2"]["rows"]
+            == exp4["ingest1"]["rows"] + exp4["new_rows_in_second_ingest"]), (
+        "the second ingest no longer ONLY adds rows -- %d + %d != %d -- so "
+        "`lost 0` is no longer guaranteed by the scenario and this test "
+        "asserts the wrong thing"
+        % (exp4["ingest1"]["rows"], exp4["new_rows_in_second_ingest"],
+           exp4["ingest1_plus_2"]["rows"]))

@@ -51,7 +51,9 @@ def split_persons(name_raw):
     The first name on the row is the one the row is about. The address, phone
     and specialty belong to that provider; the second is a passenger. Nothing
     downstream can be right about the passenger, and the results report those
-    rows separately rather than letting them move precision quietly.
+    rows separately rather than letting them move precision quietly, in the
+    `multi_provider` block of results/exp2_threshold.json, which
+    tests/test_results_invariants.py reads.
     """
     if not name_raw:
         return []
@@ -86,7 +88,7 @@ def parse_name(source_system, name_raw):
     return parts[0].upper(), parts[-1].upper()
 
 
-# A short nickname table, and it is deliberately short. The license board
+# A short nickname table, kept short on purpose. The license board
 # carries legal first names and the other three carry whatever the practice
 # uses, so without this table every Robert/Bob pair scores as two different
 # people on the given name. Section 1 of README.md reports what it buys, which

@@ -78,7 +78,9 @@
       "retained": 500
     }
   },
-  "run1_cluster_ids_pointing_at_a_different_set": 18005,
+  "run1_cluster_ids_no_longer_holding_their_original_set": 18005,
+  "run1_cluster_ids_pointing_at_a_different_set": 17972,
+  "run1_cluster_ids_with_no_cluster_at_that_id": 33,
   "run1_clusters_with_changed_membership": 4527,
   "threshold": 8.382
 }

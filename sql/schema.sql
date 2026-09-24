@@ -60,7 +60,9 @@ CREATE TABLE truth.source_row_link (
     -- address, phone and specialty belong to the provider named here; the
     -- second name is a passenger. Results report these separately rather than
     -- letting them move precision quietly, because no pairwise resolver can
-    -- be right about a row that is about two people.
+    -- be right about a row that is about two people. The count, and what they
+    -- contribute to the false pairs accepted at the operating point, are the
+    -- `multi_provider` block of results/exp2_threshold.json.
     multi_provider  boolean  NOT NULL DEFAULT false,
     PRIMARY KEY (source_system, source_row_id)
 );

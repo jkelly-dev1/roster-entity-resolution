@@ -41,11 +41,27 @@ def test_a_transposition_scores_below_an_exact_match_but_well_above_chance():
 
 
 def test_jaro_winkler_never_exceeds_one_for_a_long_shared_prefix():
-    # (mutation-checked: raise max_prefix to 8 with the same weight and the
+    # (mutation-checked: raise max_prefix to 11 with the same weight and the
     # guard fires; remove the guard and this returns more than 1, which makes
     # every threshold downstream meaningless)
+    #
+    # The mutation is run here, not described. A max_prefix of 8 would not
+    # fire: the default weight is 0.1, so the product is 0.8 and the function
+    # quietly returns 0.985185. A mutation claim nothing executes is a claim
+    # about coverage that no run can contradict.
     assert compare.jaro_winkler("KATHERINE", "KATHERINA") <= 1.0
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="must not exceed 1"):
+        compare.jaro_winkler("KATHERINE", "KATHERINA", max_prefix=11)
+    # The boundary too, because "must not exceed 1" is not "must be under 1".
+    # A product of exactly 1 is safe: the boost is n * w * (1 - j) with
+    # n <= max_prefix, so n * w <= 1 and the boost cannot carry j past 1,
+    # and a guard tightened to `>= 1.0` would reject a legal configuration
+    # while every other assertion here stayed green.
+    assert compare.jaro_winkler("KATHERINE", "KATHERINA", max_prefix=10) <= 1.0
+    # The message is named as well as the type. `pytest.raises(ValueError)` is satisfied by
+    # any ValueError, including one from a typo in the call below it, so an
+    # open raises() can stay green over a function that stopped working.
+    with pytest.raises(ValueError, match="must not exceed 1"):
         compare.jaro_winkler("A", "B", prefix_weight=0.3, max_prefix=4)
 
 

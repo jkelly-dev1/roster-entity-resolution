@@ -2152,6 +2152,15 @@
   "fit_matches": 52712,
   "fit_non_matches": 1768615,
   "input_manifest_sha256": "7138eba2ffd9da7af6ee017edd029acd1ac298698ae1c74c5fac3dfc56317df4",
+  "multi_provider": {
+    "accepted_and_false_at_the_operating_point": 2,
+    "accepted_at_the_operating_point": 178,
+    "eval_pairs_touching_one": 7093,
+    "operating_threshold": 8.382,
+    "priced_at_ratio": "10",
+    "rows": 133,
+    "share_of_all_accepted_false_they_account_for": 0.006623
+  },
   "pairs_scored": 3614341,
   "predictions": {
     "cluster_damage_exceeds_pair_error": {

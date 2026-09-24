@@ -263,7 +263,7 @@ def replay(overrides, run1, run2):
             # and is about a DIFFERENT PROVIDER, so the operator's decision is
             # now being applied to a record they never saw.
             out["cluster_id"]["misapplied"] += 1
-            # UNRELATED, not merely shifted. If the cluster now sitting at
+            # Unrelated, as opposed to shifted. If the cluster now sitting at
             # that id shares no row at all with the one the operator looked
             # at, the decision has not drifted; it has been transplanted
             # onto a different provider entirely.
@@ -338,11 +338,25 @@ def main():
     unchanged = sum(1 for mem in run1["members"].values() if mem in run2_sets)
     shifted = len(run1["members"]) - unchanged
 
-    # And how many cluster IDS point at a different set than they used to,
-    # which is the renumbering itself, stated separately so the two cannot be
-    # confused for each other.
-    id_moved = sum(1 for cid, mem in run1["members"].items()
-                   if run2["members"].get(cid) != mem)
+    # How many cluster ids no longer hold their original set is the
+    # renumbering itself, stated separately so the two cannot be confused for
+    # each other.
+    #
+    # Split in two, because "a different set sits at the old id" and "nothing
+    # sits at the old id" are not the same sentence. The second run has fewer
+    # clusters than the first, so the highest ids of run 1 have no counterpart
+    # at all: `run2["members"].get(cid)` is None for those, which is != mem
+    # and would otherwise count as a different member set. The total is the
+    # headline (the id no longer holds what it held), and the two parts are
+    # what the prose may say.
+    id_different = id_absent = 0
+    for cid, mem in run1["members"].items():
+        other = run2["members"].get(cid)
+        if other is None:
+            id_absent += 1
+        elif other != mem:
+            id_different += 1
+    id_moved = id_different + id_absent
 
     result, examples = replay(overrides, run1, run2)
 
@@ -374,8 +388,10 @@ def main():
     print()
     print("run 1 clusters that genuinely gained or lost a row: %d of %d"
           % (shifted, len(run1["members"])))
-    print("run 1 cluster IDS now pointing at a different member set: %d of %d"
+    print("run 1 cluster IDS no longer holding their original set: %d of %d"
           % (id_moved, len(run1["members"])))
+    print("  a DIFFERENT set now sits at that id: %d" % id_different)
+    print("  NO cluster exists at that id at all:  %d" % id_absent)
     print("misapplied onto a cluster sharing no row with the original: %d"
           % result["cluster_id"]["misapplied_to_unrelated_cluster"])
     print("pins now contradicted by a corrected source row: %d of %d"
@@ -400,7 +416,9 @@ def main():
                            "clusters": len(run2["members"])},
         "new_rows_in_second_ingest": n2,
         "run1_clusters_with_changed_membership": shifted,
-        "run1_cluster_ids_pointing_at_a_different_set": id_moved,
+        "run1_cluster_ids_no_longer_holding_their_original_set": id_moved,
+        "run1_cluster_ids_pointing_at_a_different_set": id_different,
+        "run1_cluster_ids_with_no_cluster_at_that_id": id_absent,
         "replay": result,
         "misapplied_examples": examples,
         "pins_contradicted_by_a_corrected_source_row": stale,

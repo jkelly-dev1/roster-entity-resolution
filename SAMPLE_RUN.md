@@ -5,6 +5,13 @@ Captured 2026-08-23 on one Linux machine: Postgres 17.6 in Docker, Python
 after `cd stack && docker compose down -v` removed the container and its
 volume.
 
+The blocks for experiments 2 and 4, and the two closing gates, were
+re-captured on 2026-09-14 against the current tree. Their elapsed times are
+this machine's and are slower than the 2026-08-23 originals. Everything else is
+the original capture. Every experiment figure was reproduced unchanged:
+experiments 1 and 3 byte for byte, and experiments 2 and 4 in every value the
+original capture carried.
+
 Two alterations, both stated here and nowhere else. The `docker compose up`
 banner is reduced to its final line, because compose reprints each step as it
 works and the repetition says nothing. And the closing `check_readme_numbers.py`
@@ -121,9 +128,14 @@ cluster damage
   thr  12.000  accepted   38319  false      0 (0.0000)  clusters  13538  welded     0  providers welded     0 (0.0000)  worst     1  
   thr  20.000  accepted   38122  false      0 (0.0000)  clusters  13562  welded     0  providers welded     0 (0.0000)  worst     1  
 
+multi-provider rows (one line, two doctors): 133
+  evaluation pairs touching one: 7093 of 1793014
+  accepted at the 10:1 operating point: 178, of which 2 are false
+  they are 0.66% of the false pairs accepted there
+
 prediction A (F1 is not cost-optimal): held
 prediction B (cluster damage exceeds pair error): held
-wrote results/exp2_threshold.json  (16s)
+wrote results/exp2_threshold.json  (28s)
 
 $ python3 scripts/exp3_survivorship.py
 clustering at the cost_optimal_10_to_1 threshold 8.382
@@ -213,7 +225,9 @@ cluster_id            229          0          271
 natural_key           500          0            0
 
 run 1 clusters that genuinely gained or lost a row: 4527 of 20030
-run 1 cluster IDS now pointing at a different member set: 18005 of 20030
+run 1 cluster IDS no longer holding their original set: 18005 of 20030
+  a DIFFERENT set now sits at that id: 17972
+  NO cluster exists at that id at all:  33
 misapplied onto a cluster sharing no row with the original: 271
 pins now contradicted by a corrected source row: 39 of 100
   a split meant for provider 1308 landed on provider 1307
@@ -224,14 +238,14 @@ pins now contradicted by a corrected source row: 39 of 100
 
 prediction A (overrides survive): REFUTED
 prediction B (cluster-id keying misapplies): held
-wrote results/exp4_override_stability.json  (44s)
+wrote results/exp4_override_stability.json  (69s)
 
 $ python -m pytest -q
-........................................................................ [ 67%]
-...................................                                      [100%]
-113 passed in 0.10s
+........................................................................ [ 54%]
+...........................................................              [100%]
+131 passed in 0.10s
 
 $ python3 scripts/check_readme_numbers.py
-115 figures re-derived from results/*.json and checked against README.md
+120 figures re-derived from results/*.json and checked against README.md
 all present
 ```

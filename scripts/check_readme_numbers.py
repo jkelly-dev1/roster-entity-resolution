@@ -45,13 +45,68 @@ def pct(x, places=0):
     return "%.*f" % (places, float(x) * 100.0)
 
 
-def build():
-    """[(label, string that must appear in README.md), ...]"""
+def published_table_rows(readme, header_cell):
+    """The first cell of every data row of the README table whose first HEADER
+    cell is `header_cell`, in the order the README prints them.
+
+    The README, not a list in this file. A hand-written collection of the
+    values a derivation is willing to check would skip anything outside it in
+    silence, and a checker like that cannot judge a row the README publishes
+    later, because the list decides and the list is written by hand. Reading
+    the published labels out of the README inverts it:
+    a row added to the README is checked because it is there, and a row the
+    README does not publish is not checked because it is not.
+    """
+    lines = readme.splitlines()
+    head = "| " + header_cell + " |"
+    out = []
+    for i, ln in enumerate(lines):
+        if not ln.startswith(head):
+            continue
+        j = i + 1
+        # the | --- | --- | separator markdown requires between head and body
+        if j < len(lines) and set(lines[j].replace("|", "").strip()) <= set("- :"):
+            j += 1
+        while j < len(lines) and lines[j].startswith("|"):
+            cells = [c.strip() for c in lines[j].strip().strip("|").split("|")]
+            if cells and cells[0]:
+                out.append(cells[0])
+            j += 1
+        return out
+    return out
+
+
+def width_label(w):
+    """The README's label for a band width: 0.0 -> "none", 0.02 -> "2%".
+
+    Derived, so a label cannot fall behind the widths the results file
+    carries.
+
+    `%g` because 0.05 * 100.0 is 5.000000000000001 in binary floating point.
+    """
+    return "none" if not w else "%g%%" % (w * 100.0)
+
+
+NUMBER_WORD = {1: "one", 2: "two", 3: "three", 4: "four", 5: "five",
+               6: "six", 7: "seven", 8: "eight", 9: "nine", 10: "ten"}
+
+
+def build(readme):
+    """Return the checks and the orphans, as two lists.
+
+    Each check is a pair of a label and a string that must appear in README.md.
+
+    The second list holds README table rows with no results row behind them:
+    a published figure whose evidence is missing, which is the failure the
+    first list cannot express because it only ever asks whether a derived
+    string is PRESENT.
+    """
     e1 = lab.read_result("exp1_blocking")
     e2 = lab.read_result("exp2_threshold")
     e3 = lab.read_result("exp3_survivorship")
     e4 = lab.read_result("exp4_override_stability")
     want = []
+    orphans = []
 
     def add(label, s):
         want.append((label, s))
@@ -103,6 +158,13 @@ def build():
         add("incremental %s timings" % size, "%s ms to %s ms"
             % (f(qp["incremental_no_index"][size]["exec_ms"], 3),
                f(qp["incremental_with_index"][size]["exec_ms"], 3)))
+    # The mutation row in the claims table carries two of these figures. A
+    # figure quoted inside a parenthesis in a table cell is still a figure, and
+    # nothing but a deriver keeps it matching the results file.
+    add("unqualified-drop mutation figures",
+        "%s ms where the true unindexed plan reads %s ms"
+        % (f(qp["incremental_with_index"]["50"]["exec_ms"], 3),
+           f(qp["incremental_no_index"]["50"]["exec_ms"], 3)))
 
     # ---- experiment 2 ------------------------------------------------------
     add("recall ceiling", f(e2["recall_ceiling_from_blocking"], 4))
@@ -153,20 +215,59 @@ def build():
             % pct(c["extra_cost_of_choosing_by_f1"]
                   / float(c["cost_optimal"]["cost"])))
 
-    # cluster damage
+    # cluster damage. WHICH rows are published is read out of the README
+    # (see published_table_rows); every one of the 13 result rows gets a label,
+    # and a row is checked when the README carries it.
+    published_damage = published_table_rows(readme, "Threshold")
+    damage_labels = {}
     for d in e2["cluster_damage"]:
-        if d["threshold"] not in (-20.0, -8.0, -3.0, -1.0, 0.385, 8.382, 12.0):
-            continue
         label = f(d["threshold"], 3)
         if "f1_optimal" in d["operating_point"]:
             label += " (F1)"
         elif "cost_optimal_10_to_1" in d["operating_point"]:
             label += " (10:1)"
+        damage_labels[label] = d
+        if label not in published_damage:
+            continue
         add("damage row %s" % d["threshold"], "| %s | %s | %s | %s | %s | %s | %s |"
             % (label, n(d["accepted_pairs"]), n(d["accepted_false"]),
                f(d["false_pair_share_of_accepted"], 4), n(d["clusters"]),
                n(d["providers_in_a_welded_cluster"]),
                n(d["most_providers_in_one_cluster"])))
+    for lab_ in published_damage:
+        if lab_ not in damage_labels:
+            orphans.append(
+                "the cluster-damage table publishes a row for %r and "
+                "results/exp2_threshold.json has no cluster_damage entry with "
+                "that threshold" % lab_)
+
+    # The distance in rows is derived. A direction word and a small integer
+    # are exactly the kind of figure a reader cannot check and a writer cannot
+    # remember, so nothing but a deriver keeps them true.
+    op_label = [lab_ for lab_ in published_damage
+                if lab_ in damage_labels
+                and "cost_optimal_10_to_1" in damage_labels[lab_]["operating_point"]]
+    six = [lab_ for lab_ in published_damage
+           if lab_ in damage_labels
+           and damage_labels[lab_]["most_providers_in_one_cluster"] >= 6]
+    if op_label and six:
+        i_op = published_damage.index(op_label[0])
+        # The table is ascending in threshold and the damage grows as the
+        # threshold falls, so "where it first reaches six" walking down from
+        # the operating point is the highest-threshold row at or above six,
+        # the largest index below i_op.
+        below = [published_damage.index(x) for x in six
+                 if published_damage.index(x) < i_op]
+        if below:
+            i_six = max(below)
+            gap = abs(i_op - i_six)
+            add("threshold at which the worst cluster first reaches six",
+                "It first reaches six at %s"
+                % f(damage_labels[published_damage[i_six]]["threshold"], 3))
+            add("rows between the operating point and the first six",
+                "%s rows %s the table"
+                % (NUMBER_WORD.get(gap, str(gap)),
+                   "up" if i_six < i_op else "down"))
 
     at10 = [d for d in e2["cluster_damage"]
             if "cost_optimal_10_to_1" in d["operating_point"]][0]
@@ -189,17 +290,26 @@ def build():
         % n(worst_20["most_providers_in_one_cluster"]))
 
     # the review band
-    width_label = {0.0: "none", 0.02: "2%", 0.05: "5%", 0.1: "10%",
-                   0.2: "20%", 0.4: "40%"}
+    # The label is derived from the width (see width_label), not looked up in
+    # a hand-written dict that could skip a band without saying so.
+    published_bands = published_table_rows(readme, "Band width")
+    band_labels = set()
     for b in e2["review_band"]["bands"]:
         w = b["band_width_fraction_of_score_range"]
-        if w not in width_label:
+        lab_ = width_label(w)
+        band_labels.add(lab_)
+        if lab_ not in published_bands:
             continue
         be = "n/a" if w == 0.0 else f(b["break_even_review_cost"], 4)
-        add("band row %s" % w, "| %s | %s | %s | %s | %s |"
-            % (width_label[w], n(b["review_queue_pairs"]),
+        add("band row %s" % lab_, "| %s | %s | %s | %s | %s |"
+            % (lab_, n(b["review_queue_pairs"]),
                n(round(b["reviews_per_10000_providers"])),
                n(b["expected_cost"]), be))
+    for lab_ in published_bands:
+        if lab_ not in band_labels:
+            orphans.append(
+                "the review-band table publishes a row for %r and "
+                "results/exp2_threshold.json has no band of that width" % lab_)
     narrow = [b for b in e2["review_band"]["bands"]
               if b["band_width_fraction_of_score_range"] == 0.02][0]
     ten = [b for b in e2["review_band"]["bands"]
@@ -282,11 +392,19 @@ def build():
         % (n(ci["misapplied"]), n(o["total"])))
     changed = e4["run1_clusters_with_changed_membership"]
     total_c = e4["ingest1"]["clusters"]
-    renum = e4["run1_cluster_ids_pointing_at_a_different_set"]
+    renum = e4["run1_cluster_ids_no_longer_holding_their_original_set"]
     add("clusters that changed", "Only %s of the %s clusters, %s percent"
         % (n(changed), n(total_c), pct(changed / float(total_c))))
     add("clusters renumbered", "But %s of them, %s percent"
         % (n(renum), pct(renum / float(total_c))))
+    # Both halves of that total, because some of those ids hold a different
+    # member set and some hold no cluster at all, and the sentence says which.
+    add("ids holding a different set",
+        "%s of them hold a different member set"
+        % n(e4["run1_cluster_ids_pointing_at_a_different_set"]))
+    add("ids holding nothing",
+        "%s hold no cluster at all"
+        % n(e4["run1_cluster_ids_with_no_cluster_at_that_id"]))
     add("renumbering factor", "move %s times as many ids"
         % {2: "two", 3: "three", 4: "four", 5: "five"}[round(renum / changed)])
     add("change percentage in the summary", "only %s\npercent of clusters"
@@ -311,7 +429,7 @@ def build():
     add("stale pins", "Of the %s pins, %s are contradicted"
         % (n(o["pin"]), n(e4["pins_contradicted_by_a_corrected_source_row"])))
 
-    return want
+    return want, orphans
 
 
 def main():
@@ -322,7 +440,7 @@ def main():
     # to ignore, which is worse than not having one.
     flat = re.sub(r"\s+", " ", readme)
 
-    want = build()
+    want, orphans = build(readme)
     missing = []
     for label, s in want:
         if re.sub(r"\s+", " ", s) not in flat:
@@ -330,6 +448,14 @@ def main():
 
     print("%d figures re-derived from results/*.json and checked against "
           "README.md" % len(want))
+    if orphans:
+        print()
+        for o in orphans:
+            print("NO EVIDENCE: %s" % o)
+        print()
+        print("%d published table row(s) have no results row behind them."
+              % len(orphans))
+        return 1
     if missing:
         print()
         for label, s in missing:
