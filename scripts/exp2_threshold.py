@@ -157,7 +157,7 @@ def jw(a, b):
 def compare_vector(fa, fb):
     """compare.compare_pair, with the two string comparators memoized."""
     ga, gb = fa["given_name"], fb["given_name"]
-    # Call the comparators rather than restating them. Tests/test_comparators.py
+    # Call the comparators instead of restating them. Tests/test_comparators.py
     # exercises compare.cmp_given and compare.cmp_family against published
     # Jaro-Winkler values, so the cut-offs are guarded there. A second copy of
     # the same rule written out here would be free to drift from the tested one,
@@ -302,6 +302,12 @@ def cluster_damage(a_idx, b_idx, scores, labels, threshold, provider_of,
 # THE SWEEP
 # ---------------------------------------------------------------------------
 
+def price(curve, ratio):
+    """Each curve row with its cost at `ratio`:1. A false match costs `ratio`
+    and a miss costs 1, so raising the ratio makes the matcher stricter."""
+    return [dict(r, cost=ratio * r["fp"] + r["fn"]) for r in curve]
+
+
 def sweep(scores, labels, total_true_eval, grid):
     """precision, recall, F1 and the confusion counts at every threshold.
 
@@ -368,6 +374,7 @@ def sweep(scores, labels, total_true_eval, grid):
 
 def main():
     t_start = time.time()
+    lab.require_first_ingest_only("exp2_threshold")
     print("loading rows ...", flush=True)
     index, provider_of, multi, fields = load_rows()
     n_rows = len(fields)
@@ -440,7 +447,7 @@ def main():
     # site_scrape row naming two providers has one address, one phone and one
     # specialty, and they belong to the first name on it; the second name is a
     # passenger. schema.sql and normalize.py both promise these are reported
-    # separately rather than left to move precision quietly. They are counted
+    # separately instead of left to move precision unseen. They are counted
     # here and written into the results file.
     ev_scores, ev_labels, ev_a, ev_b = array("f"), bytearray(), array("i"), array("i")
     ev_multi = bytearray()
@@ -473,7 +480,7 @@ def main():
 
     costs = {}
     for ratio in COST_RATIOS:
-        priced = [dict(r, cost=ratio * r["fp"] + r["fn"]) for r in curve]
+        priced = price(curve, ratio)
         best = min(priced, key=lambda r: r["cost"])
         at_f1 = [r for r in priced if r["threshold"] == best_f1["threshold"]][0]
         costs[str(ratio)] = {
@@ -551,7 +558,7 @@ def main():
             "cost_removed_vs_no_band": best_single["cost"] - cost,
             # The only number an operator can act on. Expressed as a
             # BREAK-EVEN rather than a verdict: one human decision removes
-            # this much expected cost, so the band is worth having exactly
+            # this much expected cost, so the band pays for itself exactly
             # when a reviewer's time is worth less than this, in the same
             # units the cost ratio is stated in. The repository does not know
             # what a review costs and does not pretend to.

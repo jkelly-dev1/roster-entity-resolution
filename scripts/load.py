@@ -3,11 +3,11 @@
     python3 scripts/load.py            # generate if needed, then load
     python3 scripts/load.py --regen    # regenerate the CSVs first
 
-Refuses rather than loading something else. If data/manifest.json does not
+Refuses instead of loading something else. If data/manifest.json does not
 match what the generator produces right now, the CSVs on disk came from a
 different generator and loading them would put a measurement in results/ that
 no clone can reproduce. Section 5A of this repository's own discipline: a
-check that cannot run must refuse, never pass quietly.
+check that cannot run must refuse, never pass silently.
 """
 
 import argparse

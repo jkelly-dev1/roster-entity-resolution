@@ -5,8 +5,8 @@ Captured 2026-08-23 on one Linux machine: Postgres 17.6 in Docker, Python
 after `cd stack && docker compose down -v` removed the container and its
 volume.
 
-The blocks for experiments 2 and 4, and the two closing gates, were
-re-captured on 2026-09-14 against the current tree. Their elapsed times are
+The blocks for experiments 2 and 4 were re-captured on 2026-09-14 against
+the current tree, and the two closing gates on 2026-09-27. Their elapsed times are
 this machine's and are slower than the 2026-08-23 originals. Everything else is
 the original capture. Every experiment figure was reproduced unchanged:
 experiments 1 and 3 byte for byte, and experiments 2 and 4 in every value the
@@ -15,13 +15,16 @@ original capture carried.
 Two alterations, both stated here and nowhere else. The `docker compose up`
 banner is reduced to its final line, because compose reprints each step as it
 works and the repetition says nothing. And the closing `check_readme_numbers.py`
-block is its output AFTER the three query-plan timings in README.md were updated
-to this run; the captured attempt named the previous run's three timings, which
+block is its output AFTER the six query-plan timings in README.md were updated
+to this run; the captured attempt named the previous run's six timings, which
 is exactly what that script is for.
 
-The three explain analyze timings are the only figures here that move between
-runs. Everything else is identical run to run, which was checked by running the
-whole sequence twice and diffing `results/*.json` with the timings excluded.
+The six explain analyze timings and the elapsed times are the only figures
+here that move between runs. Everything else is identical run to run, which
+was checked by running the whole sequence twice and diffing `results/*.json`
+with the timings excluded.
+
+Not re-run by CI: every command here needs the Postgres container, which CI does not start; the test suite is offline.
 
 ```
 $ cd stack && docker compose up -d && cd ..
@@ -241,11 +244,12 @@ prediction B (cluster-id keying misapplies): held
 wrote results/exp4_override_stability.json  (69s)
 
 $ python -m pytest -q
-........................................................................ [ 54%]
-...........................................................              [100%]
-131 passed in 0.10s
+........................................................................ [ 45%]
+........................................................................ [ 91%]
+..............                                                           [100%]
+158 passed in 0.41s
 
 $ python3 scripts/check_readme_numbers.py
-120 figures re-derived from results/*.json and checked against README.md
+132 figures re-derived from results/*.json and checked against README.md
 all present
 ```

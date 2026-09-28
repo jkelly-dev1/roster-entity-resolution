@@ -23,7 +23,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      # The suite is deliberately offline. Reproducing the measurements needs
+      # The suite runs offline. Reproducing the measurements needs
       # Postgres and about two minutes of wall clock; asserting them does not.
       # The tests cover the comparators, the normalizer and the generator as
       # pure functions, plus the shipped results/*.json as evidence, so CI
@@ -35,8 +35,8 @@ jobs:
 
       - run: python -m pytest -q
 
-      # Every number in the README is re-derived from results/*.json and must
-      # appear verbatim. A re-run that shifts a figure fails here rather than
-      # leaving the document quietly wrong.
+      # Every result figure in the README is re-derived from results/*.json and
+      # must appear verbatim. A re-run that shifts a figure fails here instead of
+      # leaving the document silently wrong.
       - name: README numbers match the shipped results
         run: python scripts/check_readme_numbers.py

@@ -38,7 +38,7 @@ PREDICTION = {
 # Each strategy is the ON clause of a self-join over roster.normalized_row.
 # The ordering predicate is part of every one of them: without it each pair is
 # emitted twice and joined to itself once, which inflates the candidate count
-# by slightly more than a factor of two and quietly changes every ratio.
+# by slightly more than a factor of two and silently changes every ratio.
 #
 # Every caller parenthesizes the strategy clause before appending this one.
 # AND binds tighter than OR in SQL, so a strategy that is itself a
@@ -176,7 +176,7 @@ def count_blocking_indexes():
 def drop_indexes():
     for name, _ in INDEXES:
         lab.psql("DROP INDEX IF EXISTS %s.%s;" % (INDEX_SCHEMA, name))
-    # Asserted, not assumed. `drop index if exists` on a name it cannot
+    # Checked afterward. `drop index if exists` on a name it cannot
     # resolve exits 0 having done nothing, which is indistinguishable from
     # success and turns the whole before-and-after comparison into two
     # measurements of the same plan.

@@ -90,7 +90,7 @@ def _bits(*parts):
 
     Keyed rather than concatenated so that ("a", "bc") and ("ab", "c") cannot
     collide, which is the failure that makes a generator look random while
-    quietly correlating two fields.
+    silently correlating two fields.
     """
     msg = "|".join(str(p) for p in parts).encode("utf-8")
     return int.from_bytes(
@@ -238,7 +238,7 @@ def npi_check_digit(base9):
 # NPI blocking then produces a pair that looks true by identifier and is
 # false in fact. The multiplier is odd and not divisible by five, so it is
 # coprime to 10^8 and the map is one-to-one. Uniqueness is a property of the
-# arithmetic here rather than something the generator has to check for.
+# arithmetic here instead of something the generator has to check for.
 NPI_MULTIPLIER = 48271
 NPI_OFFSET = 3141593
 
@@ -542,7 +542,7 @@ def site_scrape_row(p, row_id, batch, loc=None, passenger=None, tag="scrape"):
 
 
 def clearinghouse_row(p, row_id, batch):
-    """NPI always present and always correct. The address is STALE: a provider
+    """NPI always present and correct. The address is STALE: a provider
     who moved is still carried at the previous practice, and this source did
     not notice. That is the source a naive priority list would rank first for
     having the best identifier and the worst address."""
@@ -714,7 +714,7 @@ if __name__ == "__main__":
 # ---------------------------------------------------------------------------
 #
 # A later file. Overrides are made against the first ingest and then a second
-# file arrives. It is a DELTA, not a replacement: each row is a new assertion
+# file arrives. It is a DELTA and replaces nothing: each row is a new assertion
 # with a new source_row_id, which is how a roster feed actually behaves and
 # is why cluster membership changes without anything being deleted.
 #

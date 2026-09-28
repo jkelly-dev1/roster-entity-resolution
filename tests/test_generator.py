@@ -30,7 +30,7 @@ def test_any_provider_can_be_regenerated_without_the_ones_before_it():
 
 def test_two_different_coordinates_cannot_collide_into_one_draw():
     # Keyed rather than concatenated: ("a", "bc") and ("ab", "c") must differ,
-    # which is the failure that makes a generator look random while quietly
+    # which is the failure that makes a generator look random while silently
     # correlating two fields.
     assert gen._bits("a", "bc") != gen._bits("ab", "c")
 

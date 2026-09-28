@@ -32,11 +32,13 @@ requires them to start and the single port it exposes is bound to loopback on
 one machine. Do not reuse that pair anywhere reachable.
 
 There is no corpus and no downloaded data. Every row the experiments run on is
-generated from a fixed seed by `scripts/generate_roster.py`, so no real
-provider, member, address or identifier appears anywhere in this repository.
-The National Provider Identifiers in the generated data are arithmetically
-valid and belong to nobody: they are produced by a bijection over the digit
-space and were never drawn from any registry.
+generated from a fixed seed by `scripts/generate_roster.py`, and no real
+provider, member or address was used to make it. The National Provider
+Identifiers in the generated data are arithmetically valid and come from a
+bijection over the digit space, not from any registry. They fall in the range
+real NPIs are issued from and are not checked against the NPI registry, so a
+generated NPI may coincide with a real one by chance; the name, address and
+specialty beside it are generated all the same.
 
 Limitations that the README documents as deliberate, out-of-scope seams are
 noted but may not be actioned.

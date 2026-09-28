@@ -19,6 +19,8 @@ silent pass.
 import json
 import re
 
+import pytest
+
 import lab
 
 
@@ -104,3 +106,32 @@ def test_every_query_in_the_scripts_survives_the_wrapper(monkeypatch):
     assert ending_in_a_comment >= 1, (
         "no query in scripts/ ends in a line comment any more, so this test "
         "no longer exercises the shape it was written for")
+
+
+# --- the first-ingest experiments refuse a database holding batch 2 --------
+
+def test_a_first_ingest_experiment_refuses_when_batch_2_is_loaded(monkeypatch):
+    monkeypatch.setattr(lab, "scalar", lambda sql: "4819")
+    with pytest.raises(lab.PsqlError, match="4819 rows from a later ingest"):
+        lab.require_first_ingest_only("exp2_threshold")
+
+
+def test_a_first_ingest_experiment_runs_on_batch_1_alone(monkeypatch):
+    asked = []
+    monkeypatch.setattr(lab, "scalar", lambda sql: asked.append(sql) or "0")
+    lab.require_first_ingest_only("exp2_threshold")
+    assert "ingest_batch <> 1" in asked[0]
+
+
+@pytest.mark.parametrize("module", ["exp2_threshold", "exp3_survivorship"])
+def test_both_first_ingest_experiments_check_before_reading(module,
+                                                            monkeypatch):
+    import importlib
+    mod = importlib.import_module(module)
+
+    def refuse(experiment):
+        raise lab.PsqlError("refused " + experiment)
+
+    monkeypatch.setattr(lab, "require_first_ingest_only", refuse)
+    with pytest.raises(lab.PsqlError, match="refused " + module):
+        mod.main()

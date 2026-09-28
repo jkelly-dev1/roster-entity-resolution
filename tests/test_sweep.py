@@ -43,11 +43,11 @@ def test_sweep_accepts_a_grid_that_actually_straddles_the_scores():
     assert curve[0]["tp"] > curve[-1]["tp"]                   # and it moves
 
 
-def test_sweep_still_refuses_a_curve_whose_recall_rises():
-    """The monotonicity guard, which the collapse guard does not replace.
-
-    A collapsed curve never rises, so the monotonicity check cannot see it;
-    a curve that rises is a different fault and still has to fail.
+def test_a_real_sweep_never_reports_recall_rising():
+    """The property the monotonicity guard in sweep() enforces, on a real
+    sweep. This does not exercise the guard itself: a correct accumulator
+    cannot produce a rising curve from any input, so the guard fires only on
+    a broken sweep() and no input here can reach it.
     """
     scores, labels = _scores_and_labels()
     grid = [float(i) for i in range(0, 200, 10)]

@@ -79,7 +79,7 @@ def test_per_field_priority_puts_the_clearinghouse_last_on_an_address():
 def test_a_priority_list_that_knows_no_source_here_falls_back_rather_than_none():
     # An empty golden field is a worse answer than a value from an unranked
     # source, and pretending the list is exhaustive is how a priority scheme
-    # quietly loses fields.
+    # silently loses fields.
     unranked = [c("X", "some_new_feed", 1, "2026-07-01")]
     assert surv.pick_source_priority(unranked, "street")[0] == "X"
 
@@ -90,8 +90,8 @@ def test_only_the_payer_feed_is_ranked_for_network_status():
 
 def test_an_address_is_compared_folded_on_both_sides(  ):
     # (mutation-checked: return v.upper() for street instead of folding and
-    # every strategy scores about 0.21 on street, which reads as a finding
-    # about survivorship and is not one)
+    # this fails. Unfolded, "PKWY" and "PARKWAY" disagree, and the street
+    # scores would then measure spelling, not survivorship.)
     row = {"street": "8864 Parkside Pkwy.", "given_name": "BARB",
            "family_name": "SILVA"}
     got = surv.offered(row, "street", ("BARB", "SILVA"))

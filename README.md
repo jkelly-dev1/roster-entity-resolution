@@ -10,9 +10,16 @@ The claim this repository makes in one line: a matching threshold is not a
 tuning parameter, it is a cost decision, and the same data defends a different
 threshold once you say what a wrong merge costs.
 
-A personal learning project. Every number below is read out of a shipped results
-file, never out of the prose, and every prediction was recorded before its run.
-The refuted ones are still in the code.
+A personal learning project. Every result below is read out of a shipped
+results file, never out of the prose, and every prediction was recorded before
+its run. The refuted ones are still in the code. The figures that are not
+results are named in `scripts/check_readme_numbers.py` together with the words
+around each: software versions, the generator's provider count and rates,
+memory figures, correction file sizes, constants, values a mutation sets or
+produces, one illustration, one structural zero, a date, and section, list,
+run and experiment numbers. That script fails on any other figure, and on a
+result printed anywhere but the sentence it was derived for. It reads digits
+only, so the run time below, written in words, is not checked.
 
 What you need to run it: one Postgres container and Python 3.11 or later.
 Nothing else to install. `docker compose up -d` starts a single Postgres 17
@@ -42,8 +49,9 @@ F1-optimal choice cost 26 percent more; at 30:1 it costs 74 percent more. A
 per-field source priority beats majority vote, which gets the legal first name
 wrong for 42 percent of providers because three of the four sources carry the
 nickname. And 271 of 500 human overrides keyed on a cluster id were silently
-transferred to a different provider after the second file arrived, usually the
-one next door, while only 23 percent of clusters had actually changed.
+transferred to a different provider after the second file arrived (in all five
+examples the run recorded, the one next door), while only 23 percent of
+clusters had actually changed.
 
 ## The data, and why it can be trusted
 
@@ -72,7 +80,7 @@ that two of the four sources have not caught up with.
 Ground truth ships with it, in its own `truth` schema that the resolver never
 reads. That is the only reason precision and recall here are measured rather
 than estimated, and it is also the biggest thing that does not generalize: see
-"What this does not measure".
+"Limits".
 
 ## 1. What blocking throws away before scoring runs
 
@@ -171,10 +179,12 @@ number below comes from the evaluation half: 1,793,014 scored pairs covering
 Agreeing on a surname is worth 0.12 bits and disagreeing on the state is
 evidence for a match. Neither is a defect. Blocking already required near
 agreement on the surname, so by the time a pair is scored almost every pair
-agrees on it and the agreement has stopped discriminating. State is sharper: a
-candidate pair can only disagree on state if it arrived through NPI or phone
-blocking, and those two produce true pairs 100 and 99.98 percent of the time, so
-a state disagreement in THIS candidate set really is evidence of a match.
+agrees on it and the agreement has stopped discriminating. State is sharper:
+most candidate pairs that disagree on state arrived through NPI or phone
+blocking, and those two produce true pairs 100 and 99.98 percent of the time,
+so a state disagreement in THIS candidate set is, on balance, evidence of a
+match. Not every one: ZIP and surname blocking also admits pairs across a
+mistyped state, and those are false pairs.
 
 That is correct Fellegi-Sunter behavior and it is also a warning. THE u
 probabilities are conditional on the candidate set, not on the population.
@@ -256,7 +266,7 @@ exactly when a reviewer's time is worth less than that, in the same units the
 cost ratio is stated in. This repository does not know what a review costs and
 does not publish a number that assumes one.
 
-What the table says plainly is that a review layer is not cheap here. Even the
+What the table says is that a review layer is not cheap here. Even the
 narrowest band puts 286 pairs per 10,000 providers in front of a person, and
 each of those looks is worth at most 0.41 of one missed match. Getting the cost
 down to 818 takes 15,635 reviews per 10,000 providers, which is more than one
@@ -372,12 +382,12 @@ the failure is worse than losing them. NOT ONE OF THE 500 WAS DROPPED. 271 of
 them, 54 percent, were still being enforced against a different provider.
 
 Every one of those 271 landed on a cluster sharing no row with the one the
-operator looked at, and the wrong provider is usually the one next door. A split
-meant for provider 1308 was applied to provider 1307; one meant for 1737 to
-1736. That is what makes it quiet. An override that jumped to a random record
-might be noticed; one that slides onto the adjacent cluster looks like an
-ordinary decision about a plausible neighbor, and nothing in the pipeline flags
-it.
+operator looked at, and in all five examples the run recorded, the wrong
+provider is the one next door. A split meant for provider 1308 was applied to
+provider 1307; one meant for 1737 to 1736. That is what makes it hard to
+notice. An override that jumped to a random record might be noticed; one that
+slides onto the adjacent cluster looks like an ordinary decision about a
+plausible neighbor, and nothing in the pipeline flags it.
 
 The 229 that survived are the problem, not a consolation. Nothing in the scheme
 distinguishes them from the 271: their cluster ids happened not to shift.
@@ -421,10 +431,11 @@ python3 scripts/exp1_blocking.py --batches 1,2 --strategy union_b12 --no-result
 python3 scripts/exp4_override_stability.py
 ```
 
-About two minutes end to end. `SAMPLE_RUN.md` is the captured output of exactly
-that sequence. The last blocking run materializes candidate pairs over both
-ingests and deliberately writes no results file, so the published first-ingest
-measurement cannot be overwritten by the preparation for experiment 4.
+About two minutes for the whole sequence. `SAMPLE_RUN.md` is the captured
+output of exactly that sequence. The last blocking run materializes candidate
+pairs over both ingests and deliberately writes no results file, so the
+published first-ingest measurement cannot be overwritten by the preparation for
+experiment 4.
 
 The test suite needs neither Docker nor Postgres:
 
@@ -438,7 +449,7 @@ Take the stack down with `cd stack && docker compose down -v`.
 
 ## Claims backed by tests
 
-Rows carrying a published number are mutation-checked and say so.
+Rows carrying a published measurement are mutation-checked and say so.
 
 | Claim | Test |
 | --- | --- |
@@ -471,7 +482,7 @@ Rows carrying a published number are mutation-checked and say so.
 | Choosing by F1 costs nothing at parity and costs money at 10:1 | `tests/test_results_invariants.py::test_choosing_by_f1_costs_nothing_at_parity_and_costs_money_at_ten_to_one` |
 | The cost-optimal threshold rises with the price of a false match | `tests/test_results_invariants.py::test_the_cost_optimal_threshold_rises_with_the_price_of_a_false_match` |
 | Every recorded optimum is the optimum its price implies, re-derived from the published curve rather than read from the file | `tests/test_results_invariants.py::test_every_recorded_optimum_is_the_optimum_its_price_implies` |
-| A false match is the priced error and a miss is the unit, so raising the price makes the matcher STRICTER. Swapping the two terms leaves the thresholds sorted -- they collapse to one value -- so the ordering row above cannot see it | `tests/test_results_invariants.py::test_a_false_match_is_the_priced_error_and_a_miss_is_the_unit` (mutation-checked: swap the two cost terms, or price a false match at zero, and it fails) |
+| A false match is the priced error and a miss is the unit, so raising the price makes the matcher STRICTER. Swapping the two terms leaves the thresholds sorted -- they collapse to one value -- so the ordering row above cannot see it | `tests/test_results_invariants.py::test_the_recorded_optima_are_what_the_pricing_code_computes` (mutation-checked: swap the two cost terms in `exp2_threshold.price()` and it fails) and `::test_a_false_match_is_the_priced_error_and_a_miss_is_the_unit`, which checks the direction on the published curve (mutation-checked on its own repricing helper: swap the two terms, or price a false match at zero, and it fails) |
 | The transitive closure multiplies a pairwise error at the operating point | `tests/test_results_invariants.py::test_the_transitive_closure_multiplies_a_pairwise_error` |
 | Welding gets worse as the threshold falls, and the cliff is real | `tests/test_results_invariants.py::test_welding_gets_worse_as_the_threshold_falls` |
 | A wider review band never shrinks the queue and never raises the cost | `tests/test_results_invariants.py::test_a_wider_review_band_never_shrinks_the_queue` |
@@ -482,7 +493,7 @@ Rows carrying a published number are mutation-checked and say so.
 | Majority vote still wins where the sources differ only by noise | `tests/test_results_invariants.py::test_majority_vote_still_wins_where_the_sources_differ_only_by_noise` |
 | A provider at two practice sites has no single correct address | `tests/test_results_invariants.py::test_a_provider_at_two_practice_sites_has_no_single_correct_address` |
 | Welded clusters are excluded from survivorship rather than scored | `tests/test_results_invariants.py::test_welded_clusters_are_excluded_from_survivorship_rather_than_scored` |
-| Natural keys lose no override here, and CANNOT misapply one by construction: a natural key names a source row, so it either resolves to that row or does not resolve at all. The zero in that column is a property of the scheme, not a measurement, and `lost 0` holds because this second ingest only ADDS rows | `tests/test_results_invariants.py::test_natural_keys_lose_no_override_and_misapply_none` |
+| Natural keys lose no override here, and CANNOT misapply one by construction: a natural key names a source row, so it either resolves to that row or does not resolve at all. The zero in that column is a property of the scheme, not a measurement, and so is `lost 0`: run 2 is clustered over both batches, so every batch-1 key is present by construction, and a feed that retires rows is not modeled | `tests/test_results_invariants.py::test_natural_keys_lose_no_override_and_misapply_none` |
 | The cluster-id replay split is the one the recorded pair ordering produces, so a re-run that drops the ORDER BY is caught rather than published | `tests/test_results_invariants.py::test_the_cluster_id_replay_split_matches_the_recorded_ordering` |
 | Cluster-id keying misapplies overrides onto unrelated providers | `tests/test_results_invariants.py::test_cluster_id_keying_misapplies_overrides_onto_other_providers` |
 | A small change in the data renumbers almost every cluster (mutation-checked: compare by cluster id instead of member set and the contrast disappears) | `tests/test_results_invariants.py::test_a_small_change_in_the_data_renumbers_almost_every_cluster` |
@@ -492,10 +503,10 @@ Rows carrying a published number are mutation-checked and say so.
 | A majority winner is attributed to a row that actually holds it | `tests/test_survivorship.py::test_a_majority_winner_is_attributed_to_a_row_that_actually_holds_it` |
 | Per-field priority takes the legal name from the licensing board | `tests/test_survivorship.py::test_per_field_priority_takes_the_legal_name_from_the_licensing_board` |
 | Per-field priority puts the clearinghouse last on an address and first on the NPI | `tests/test_survivorship.py::test_per_field_priority_puts_the_clearinghouse_last_on_an_address` |
-| An address is compared folded on both sides (mutation-checked: compare raw text and every strategy scores about 0.21 on street) | `tests/test_survivorship.py::test_an_address_is_compared_folded_on_both_sides` |
+| An address is compared folded on both sides (mutation-checked: compare raw text and it fails) | `tests/test_survivorship.py::test_an_address_is_compared_folded_on_both_sides` |
 | Every shipped lineage row names a source row that holds its value | `tests/test_survivorship.py::test_every_shipped_lineage_row_names_a_source_row_that_holds_its_value` |
 
-## What this does not measure
+## Limits
 
 - Synthetic truth. That answer key was invented here, and real entity resolution
   has no answer key. Every precision and recall figure above is measured against
@@ -544,10 +555,10 @@ manufactured on the way out of the source systems, by running an
 incremental connector against a world where every change is known and
 counting what the watermark misses. It needs nothing but python3.
 
-All four follow the same rules: no claim without a test, mutation checks on the
-tests that matter, and predictions recorded before the run so that the refuted
-ones survive. Three of the six predictions here were refuted and all three are
-still in the code.
+All four follow the same rules: a test behind every claim, mutation checks on
+the tests that matter, and predictions recorded before the run so that the
+refuted ones survive. Three of the six predictions here were refuted and all
+three are still in the code.
 
 ## License
 

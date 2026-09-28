@@ -51,7 +51,7 @@ def split_persons(name_raw):
     The first name on the row is the one the row is about. The address, phone
     and specialty belong to that provider; the second is a passenger. Nothing
     downstream can be right about the passenger, and the results report those
-    rows separately rather than letting them move precision quietly, in the
+    rows separately instead of letting them move precision unseen, in the
     `multi_provider` block of results/exp2_threshold.json, which
     tests/test_results_invariants.py reads.
     """
@@ -88,11 +88,11 @@ def parse_name(source_system, name_raw):
     return parts[0].upper(), parts[-1].upper()
 
 
-# A short nickname table, kept short on purpose. The license board
-# carries legal first names and the other three carry whatever the practice
-# uses, so without this table every Robert/Bob pair scores as two different
-# people on the given name. Section 1 of README.md reports what it buys, which
-# is the only reason to have it rather than an assumption that it helps.
+# A short nickname table, kept short. The license board carries legal first
+# names and the other three carry whatever the practice uses, so without this
+# table every Robert/Bob pair scores as two different people on the given
+# name. Section 1 of README.md reports what it buys, which is the only reason
+# to have it rather than an assumption that it helps.
 #
 # It maps the short form to the legal one, never the reverse: several legal
 # names share a short form and a table that expanded them would have to guess.
@@ -124,7 +124,7 @@ def canonical_given(given):
 
 # Written independently of the generator and allowed to be incomplete, because
 # a real abbreviation table always is. Anything not in here survives as
-# whatever the source wrote, which costs a token overlap rather than crashing.
+# whatever the source wrote, which costs a token overlap instead of crashing.
 STREET_TYPE_FOLD = {
     "ST": "STREET", "STR": "STREET", "STREET": "STREET",
     "AVE": "AVENUE", "AV": "AVENUE", "AVENUE": "AVENUE",
@@ -191,7 +191,7 @@ def clean_npi(npi):
     """Ten digits, or None.
 
     None and wrong are not the same thing and this is where the difference is
-    decided. A malformed NPI becomes absent rather than becoming a key that
+    decided. A malformed NPI becomes absent instead of becoming a key that
     blocks with nothing, which keeps "how many rows carry a usable NPI"
     answerable from this column alone.
     """

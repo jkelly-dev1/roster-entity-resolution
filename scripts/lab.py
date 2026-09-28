@@ -58,6 +58,23 @@ def scalar(sql):
     return out.strip()
 
 
+def require_first_ingest_only(experiment):
+    """Refuse when the second ingest is loaded.
+
+    Experiments 2 and 3 measure the first ingest, and their queries read every
+    loaded row. After `load.py --batch2` those queries take in batch 2 as
+    well, which moves the recall denominator and the two-site count, and the
+    input manifest covers batch 1 only, so nothing else would notice.
+    """
+    loaded = int(scalar(
+        "SELECT count(*) FROM roster.source_row WHERE ingest_batch <> 1;"))
+    if loaded:
+        raise PsqlError(
+            "%s measures the first ingest, and %d rows from a later ingest "
+            "are loaded. Run scripts/load.py and scripts/normalize.py again "
+            "to reload batch 1 alone." % (experiment, loaded))
+
+
 def query_json(sql):
     """Rows as a list of dicts.
 

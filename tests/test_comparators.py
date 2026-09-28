@@ -42,12 +42,14 @@ def test_a_transposition_scores_below_an_exact_match_but_well_above_chance():
 
 def test_jaro_winkler_never_exceeds_one_for_a_long_shared_prefix():
     # (mutation-checked: raise max_prefix to 11 with the same weight and the
-    # guard fires; remove the guard and this returns more than 1, which makes
-    # every threshold downstream meaningless)
+    # guard fires; remove the guard and this test fails on the missing raise.
+    # These two names still score 0.985185 unguarded; a longer shared prefix,
+    # ABCDEFGHIJKX against ABCDEFGHIJKY, scores 1.0056, above 1, and the guard
+    # exists for that case)
     #
     # The mutation is run here, not described. A max_prefix of 8 would not
     # fire: the default weight is 0.1, so the product is 0.8 and the function
-    # quietly returns 0.985185. A mutation claim nothing executes is a claim
+    # silently returns 0.985185. A mutation claim nothing executes is a claim
     # about coverage that no run can contradict.
     assert compare.jaro_winkler("KATHERINE", "KATHERINA") <= 1.0
     with pytest.raises(ValueError, match="must not exceed 1"):

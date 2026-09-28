@@ -15,7 +15,7 @@ defect that presents as a strategy with mysteriously poor completeness.
 
 Every comparator returns a level, not a number. Fellegi-Sunter needs discrete
 agreement patterns to estimate m and u against, and MISSING has to be its own
-level rather than being folded into DISAGREE: a license board row has no
+level instead of being folded into DISAGREE: a license board row has no
 address at all, and scoring that as an address disagreement would push every
 one of its true pairs below any threshold.
 """

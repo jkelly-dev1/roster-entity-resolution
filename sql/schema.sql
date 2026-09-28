@@ -58,8 +58,8 @@ CREATE TABLE truth.source_row_link (
     provider_id     integer  NOT NULL REFERENCES truth.canonical_provider,
     -- A site_scrape row that names two providers on one line. The row's
     -- address, phone and specialty belong to the provider named here; the
-    -- second name is a passenger. Results report these separately rather than
-    -- letting them move precision quietly, because no pairwise resolver can
+    -- second name is a passenger. Results report these separately instead of
+    -- letting them move precision unseen, because no pairwise resolver can
     -- be right about a row that is about two people. The count, and what they
     -- contribute to the false pairs accepted at the operating point, are the
     -- `multi_provider` block of results/exp2_threshold.json.
@@ -75,7 +75,7 @@ CREATE INDEX ON truth.source_row_link (provider_id);
 -- ---------------------------------------------------------------------------
 
 -- The four rosters, landed as they arrived. EVERY COLUMN IS text AND
--- NULLABLE, deliberately: a source that promises 10-digit NPIs and delivers
+-- NULLABLE: a source that promises 10-digit NPIs and delivers
 -- 15% nulls is the normal case, and a schema that refuses the file is a
 -- schema that never sees the problem this repository is about.
 CREATE TABLE roster.source_row (

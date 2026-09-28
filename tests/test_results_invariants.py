@@ -128,14 +128,14 @@ def test_multi_provider_rows_are_reported_separately(exp2):
     A site_scrape row naming two providers is about two people and carries one
     address, one phone and one specialty. No pairwise resolver can be right
     about it, and both of those files say the results report such rows
-    separately "rather than letting them move precision quietly". This holds
+    separately "instead of letting them move precision unseen". This holds
     the results file to that sentence.
     """
     m = exp2["multi_provider"]
     assert m["rows"] > 0, (
         "no multi-provider rows at all, so the claim in sql/schema.sql and "
         "scripts/normalize.py is about a case this data does not contain")
-    # They must be a MINORITY, or "quietly" is the wrong word and the headline
+    # They must be a MINORITY, or "unseen" is the wrong word and the headline
     # precision is mostly a statement about rows nobody could resolve.
     assert m["eval_pairs_touching_one"] < exp2["eval_pairs_scored"] * 0.5
     assert 0 <= m["accepted_and_false_at_the_operating_point"] \
@@ -346,8 +346,8 @@ def test_cluster_id_keying_misapplies_overrides_onto_other_providers(exp4):
     # Every misapplication lands somewhere unrelated. None of them merely
     # drifted within the cluster the operator was looking at.
     assert ci["misapplied_to_unrelated_cluster"] == ci["misapplied"]
-    # The ones that survived did so by accident, not by design: nothing in the
-    # scheme distinguishes them, and none were lost, so a reader cannot tell a
+    # The ones that survived did so by accident: nothing in the scheme
+    # distinguishes them, and none were lost, so a reader cannot tell a
     # surviving override from a transplanted one without checking the rows.
     assert ci["lost"] == 0
 
@@ -376,11 +376,11 @@ def test_a_small_change_in_the_data_renumbers_almost_every_cluster(exp4):
     different = exp4["run1_cluster_ids_pointing_at_a_different_set"]
     absent = exp4["run1_cluster_ids_with_no_cluster_at_that_id"]
     assert different + absent == renumbered
-    assert absent == exp4["ingest1"]["clusters"] - exp4["ingest1_plus_2"]["clusters"] \
-        or absent > 0
+    assert absent == (exp4["ingest1"]["clusters"]
+                      - exp4["ingest1_plus_2"]["clusters"])
 
 
-def test_the_second_ingest_only_adds_rows(exp4):
+def test_the_recorded_row_counts_of_the_two_ingests_agree(exp4):
     assert exp4["ingest1_plus_2"]["rows"] > exp4["ingest1"]["rows"]
     assert (exp4["ingest1_plus_2"]["rows"] - exp4["ingest1"]["rows"]
             == exp4["new_rows_in_second_ingest"])
@@ -433,7 +433,7 @@ def test_all_four_experiments_measured_the_same_input(exp1, exp2, exp3, exp4):
 # ---------------------------------------------------------------------------
 
 def _reprice(curve, ratio):
-    """The optimum this ratio implies, computed here rather than read."""
+    """The optimum this ratio implies, computed here from the curve."""
     priced = [(ratio * r["fp"] + r["fn"], r["threshold"], r) for r in curve]
     best = min(priced, key=lambda t: (t[0], t[1]))
     return best[0], best[2]
@@ -448,6 +448,21 @@ def test_every_recorded_optimum_is_the_optimum_its_price_implies(exp2):
             f"at {ratio}:1 the recorded optimum costs {got['cost']} but the "
             f"cheapest point on the published curve costs {want_cost}")
         assert got["threshold"] == want_row["threshold"]
+
+
+def test_the_recorded_optima_are_what_the_pricing_code_computes(exp2):
+    """exp2_threshold.price() replayed over the published curve. The tests
+    around this one reprice the curve with their own helper, so an edit to
+    the production pricing that re-derived the file would pass them; this
+    one reads the code that priced the run."""
+    import exp2_threshold
+    for ratio in exp2["cost_ratios"]:
+        best = min(exp2_threshold.price(exp2["curve"], ratio),
+                   key=lambda r: r["cost"])
+        assert best == exp2["cost_optimal"][str(ratio)]["cost_optimal"], (
+            f"at {ratio}:1 the pricing code picks threshold "
+            f"{best['threshold']}, the run recorded "
+            f"{exp2['cost_optimal'][str(ratio)]['cost_optimal']['threshold']}")
 
 
 def test_a_false_match_is_the_priced_error_and_a_miss_is_the_unit(exp2):
@@ -469,7 +484,7 @@ def test_a_false_match_is_the_priced_error_and_a_miss_is_the_unit(exp2):
 
 
 def test_choosing_by_f1_really_does_cost_money_at_ten_to_one(exp2):
-    """The claim the section is named for, re-derived rather than read."""
+    """The claim the section is named for, re-derived from the curve."""
     curve = exp2["curve"]
     best_f1 = max(curve, key=lambda r: r["f1"])
     opt_cost, opt = _reprice(curve, 10)
@@ -496,9 +511,9 @@ def test_the_cluster_id_replay_split_matches_the_recorded_ordering(exp4):
 
     Union-find assigns ids in the order it sees pairs, so the replay's
     retained/misapplied split is a property of the ORDER BY in the pair query.
-    Dropping that ordering takes the split from 229/271 to 0/500, the
-    section's headline number, doubled, and every other test still passes,
-    because they all assert relations rather than the split itself.
+    Dropping that ordering can move the split away from 229/271, and the
+    other tests assert relations, not the split itself, so this is the test
+    that fails.
 
     exp2_threshold.py's own comment calls unordered union-find "the hardest
     kind of irreproducibility to notice". This is what notices it.
@@ -526,20 +541,14 @@ def test_natural_key_misapplication_is_structurally_impossible_not_measured(exp4
     nk = exp4["replay"]["natural_key"]
     assert nk["misapplied"] == 0
     assert nk["retained"] + nk["lost"] == exp4["overrides"]["total"]
-    # `lost` is zero because of the SCENARIO, not the scheme: batch 2 only
-    # adds rows, so every batch-1 key still resolves.
-    #
-    # Asserted as an identity, not as two inequalities. `new_rows > 0 and
-    # rows(1+2) > rows(1)` would be satisfied by a refresh that retired 1,000
-    # batch-1 rows while adding 4,819, which destroys the property the comment
-    # above claims: a retired batch-1 row is a natural key that no longer
-    # resolves, which is exactly `lost`. Only the sum can tell "added 4,819"
-    # from "added 5,819 and dropped 1,000".
+    # `lost` is zero by construction in this experiment: run 2 is clustered
+    # over batches 1 and 2, so every batch-1 key is in its key set. The
+    # identity below checks that the recorded counts agree with each other.
+    # It is not evidence that the load was additive: all three numbers are
+    # read from the same database in one run, so it holds for any load.
     assert exp4["new_rows_in_second_ingest"] > 0
     assert (exp4["ingest1_plus_2"]["rows"]
             == exp4["ingest1"]["rows"] + exp4["new_rows_in_second_ingest"]), (
-        "the second ingest no longer ONLY adds rows -- %d + %d != %d -- so "
-        "`lost 0` is no longer guaranteed by the scenario and this test "
-        "asserts the wrong thing"
+        "the recorded row counts disagree -- %d + %d != %d"
         % (exp4["ingest1"]["rows"], exp4["new_rows_in_second_ingest"],
            exp4["ingest1_plus_2"]["rows"]))

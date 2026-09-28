@@ -128,3 +128,130 @@ def test_build_derives_the_row_distance_the_prose_states(readme):
     assert " up " in d or " down " in d
     # It has to be IN the README, which is what the checker exists to require.
     assert d in " ".join(readme.split())
+
+
+# --- underived ----------------------------------------------------------------
+#
+# build() asks whether each derived string is PRESENT. 74,926 appears seven
+# times in the README, so that question checks one of them. underived() asks
+# the other way round: is every figure in the README one build() derived?
+
+def test_the_shipped_readme_has_no_underived_figure(readme):
+    want, _ = chk.build(readme)
+    assert chk.underived(readme, want) == []
+
+
+@pytest.mark.parametrize("shipped, edited", [
+    ("same 74,926 rows", "same 76,926 rows"),
+    ("any of its 19,617 rows", "any of its 19,817 rows"),
+    ("reaches 106,150 of", "reaches 104,150 of"),
+])
+def test_an_edited_repeat_of_a_derived_figure_is_caught(readme, shipped,
+                                                         edited, tmp_path,
+                                                         monkeypatch):
+    assert readme.count(shipped) == 1, shipped
+    doctored = readme.replace(shipped, edited)
+    new_figure = (set(chk._FIGURE.findall(edited))
+                  - set(chk._FIGURE.findall(shipped))).pop()
+    want, _ = chk.build(doctored)
+    assert new_figure in [t for _, t in chk.underived(doctored, want)]
+    # and the gate itself refuses the document, not only the helper
+    path = tmp_path / "README.md"
+    path.write_text(doctored, encoding="utf-8")
+    monkeypatch.setattr(chk, "README", str(path))
+    assert chk.main() == 1
+
+
+# --- position -----------------------------------------------------------------
+#
+# A figure is covered only where a derived string puts it. Each edit below
+# types one derived figure over another, or a parameter over a result, in a
+# single sentence. A check that asked only whether the new digits are derived
+# SOMEWHERE passes every one of them.
+
+@pytest.mark.parametrize("shipped, edited", [
+    ("distinguishes them from the 271:", "distinguishes them from the 229:"),
+    ("not the 95 percent predicted", "not the 74 percent predicted"),
+    ("at 10 times a missed one", "at 30 times a missed one"),
+    ("takes 8.382 away", "takes 0.385 away"),
+    ("is 2.8 billion comparisons", "is 26 billion comparisons"),
+    ("Only 3,054 of the", "Only 13,771 of the"),
+    ("worth 0.12 bits", "worth 7.16 bits"),
+    ("A 23 percent change", "A 90 percent change"),
+    ("ends with 33 fewer clusters", "ends with 50 fewer clusters"),
+    ("the 12% of providers", "the 30% of providers"),
+    ("3 percent of rows carry", "30 percent of rows carry"),
+    ("about 3 GB of free", "about 30 GB of free"),
+])
+def test_a_figure_typed_over_another_derived_figure_is_caught(
+        readme, shipped, edited, tmp_path, monkeypatch):
+    assert readme.count(shipped) == 1, shipped
+    doctored = readme.replace(shipped, edited)
+    new_figure = (set(chk._FIGURE.findall(edited))
+                  - set(chk._FIGURE.findall(shipped))).pop()
+    want, _ = chk.build(doctored)
+    # The new digits are a figure the checker derives, or one NOT_DERIVED
+    # names, somewhere else in the README: position is what catches them.
+    elsewhere = {t for s in [s for _, s in want] + list(chk.NOT_DERIVED)
+                 for t in chk._FIGURE.findall(s)}
+    assert new_figure in elsewhere, new_figure
+    assert new_figure in [t for _, t in chk.underived(doctored, want)]
+    path = tmp_path / "README.md"
+    path.write_text(doctored, encoding="utf-8")
+    monkeypatch.setattr(chk, "README", str(path))
+    assert chk.main() == 1
+
+
+def test_a_bare_figure_cannot_place_itself():
+    assert not chk.places("271")
+    assert not chk.places("0.385")
+    assert chk.places("distinguishes them from the 271:")
+    assert chk.places("| 0.385 | 1,448 |")
+
+
+def test_every_derived_string_places_its_figures(readme):
+    want, _ = chk.build(readme)
+    assert [s for _, s in want if not chk.places(s)] == []
+
+
+def test_a_not_derived_entry_whose_sentence_is_gone_fails_the_gate(
+        readme, tmp_path, monkeypatch):
+    shipped = "Give it about 3 GB of free memory."
+    assert readme.count(shipped) == 1
+    doctored = readme.replace(shipped, "Give it free memory.")
+    assert chk.stale_exceptions(doctored) == ["about 3 GB of free memory"]
+    path = tmp_path / "README.md"
+    path.write_text(doctored, encoding="utf-8")
+    monkeypatch.setattr(chk, "README", str(path))
+    assert chk.main() == 1
+
+
+def test_the_docstring_names_every_figure_not_derived():
+    named = {t.rstrip(",") for t in chk._FIGURE.findall(chk.__doc__)}
+    for key in chk.NOT_DERIVED:
+        for token in chk._FIGURE.findall(key):
+            assert token.rstrip(",") in named, (key, token)
+
+
+def test_emit_prints_every_derived_string_one_per_line(readme, capsys):
+    want, _ = chk.build(readme)
+    assert chk.main(["--emit"]) == 0
+    printed = capsys.readouterr().out.splitlines()
+    assert printed == [" ".join(s.split()) for _, s in want]
+
+
+def test_a_result_repeated_in_a_new_sentence_is_caught(readme, tmp_path,
+                                                       monkeypatch):
+    """Every derived string is still present, so only the position check
+    can see this: 229 is a derived figure, in a sentence nothing derives."""
+    shipped = "The contrast is the result."
+    assert readme.count(shipped) == 1
+    doctored = readme.replace(shipped,
+                              "The contrast is the result, and 229 moved.")
+    want, _ = chk.build(doctored)
+    flat = " ".join(doctored.split())
+    assert all(" ".join(s.split()) in flat for _, s in want)
+    path = tmp_path / "README.md"
+    path.write_text(doctored, encoding="utf-8")
+    monkeypatch.setattr(chk, "README", str(path))
+    assert chk.main() == 1

@@ -113,10 +113,10 @@ def cluster_run(threshold, weights, batches, strategy):
          ORDER BY c.a_system, c.a_row_id, c.b_system, c.b_row_id
          -- THE ORDERING DECIDES THE CLUSTER IDS AND THEREFORE THE HEADLINE.
          -- Without it Postgres may return the pairs in any order, union-find
-         -- assigns different ids, and the cluster_id replay goes from
-         -- 229 retained / 271 misapplied to 0 retained / 500 misapplied --
-         -- the section's headline number, doubled, with every test green.
-         -- test_results_invariants.py pins the recorded split.
+         -- assigns different ids, and the cluster_id replay moves away from
+         -- the recorded 229 retained / 271 misapplied, which is the
+         -- section's headline. test_results_invariants.py pins that split,
+         -- so a re-run that changed it fails there.
     """ % (strategy, ",".join(str(b) for b in batches),
            ",".join(str(b) for b in batches)))
 
@@ -221,7 +221,7 @@ def build_overrides(run1, weights, threshold):
         # Both keys are recorded at creation. The cluster id is what the naive
         # implementation stores; the row key is what the stable one stores.
         # Recording both is the only way to replay the same decisions through
-        # both schemes rather than comparing two different sets of decisions.
+        # both schemes instead of comparing two different sets of decisions.
         o["cluster_id_at_creation"] = run1["cluster_of"][o["a"]]
     return overrides
 
@@ -238,10 +238,11 @@ def replay(overrides, run1, run2):
     # shape in the payload, and named here so the zero is not read as
     # evidence.
     #
-    # `lost` IS contingent, but not on the scheme: this second ingest only
-    # ADDS rows, so run2's key set is a superset of run1's and a natural key
-    # cannot fail to resolve. Against a full-refresh feed that retires the
-    # first file's rows, the same code loses most of them.
+    # `lost` is structural too, in this experiment. Run 2 is clustered over
+    # batches 1 AND 2, so every batch-1 row is in its key set by the query
+    # that loads it, and a natural key cannot fail to resolve. A feed that
+    # retired batch-1 rows is not modeled here, so nothing in this run says
+    # what natural keys would lose against one.
     out = {"cluster_id": {"retained": 0, "lost": 0, "misapplied": 0,
                           "misapplied_to_unrelated_cluster": 0},
            "natural_key": {"retained": 0, "lost": 0, "misapplied": 0,

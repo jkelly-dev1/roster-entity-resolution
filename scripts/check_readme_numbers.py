@@ -1,7 +1,27 @@
-"""Re-derive every published figure from results/*.json and require it verbatim
-in README.md.
+"""Re-derive every result figure from results/*.json and require it verbatim
+in README.md, in the sentence it is printed in.
 
-    python3 scripts/check_readme_numbers.py
+    python3 scripts/check_readme_numbers.py            check
+    python3 scripts/check_readme_numbers.py --emit     print what it derives
+
+Each derived string carries the words around its figure, and every figure in
+the README has to sit inside one of them. A figure that matches a result
+printed elsewhere does not count: typing the retained count over the
+misapplied count in one sentence fails, although the retained count is
+derived in another.
+
+What is not derived. NOT_DERIVED names each README figure that no results
+file holds, with the words around it: the Python and Postgres versions (3.11,
+17); memory figures measured by hand (3, 4.1, 2.2, 0.9); the generator's
+provider count and rates, which are parameters (20,000, 15, 1.5, 30, 20, 12,
+3, 2, 2.5); correction file sizes (50, 1,000); an illustration of the
+reviewer assumption (90); values a mutation sets or produces (11, 19,998,
+2.6634); the NPI prefix constant (80840); the similarity ceiling (1); the
+ratio a named test is written for (10); run, batch, experiment, section and
+list numbers (1, 2, 3, 4); the structural zero of the natural-key replay (0);
+and a date (2026, 09, 14). Fenced code is not read, so the batch list 1,2
+in the reproduction commands is an argument and not a figure. The script
+reads digits only, so a count written as a word is outside it.
 
 Why this exists. A number in a document has no owner. The results files are
 rewritten by every run; the prose is rewritten by hand, sometimes, when
@@ -12,8 +32,8 @@ not look like a figure to a reader or to whoever writes a deriver, so it is
 the one most likely to go stale. Roughly a third of the checks below are prose.
 
 It prints how many figures it checked whether or not any are missing, so a
-version of this file that has quietly stopped deriving half of them is visible
-rather than clean.
+version of this file that has silently stopped deriving half of them is visible
+instead of clean.
 
 What it does not do. It compares the README against the COMMITTED evidence, not
 against a fresh run. If the experiments are re-run and the results change, this
@@ -112,12 +132,33 @@ def build(readme):
         want.append((label, s))
 
     # ---- the data ----------------------------------------------------------
-    add("source rows", n(e1["source_rows"]))
-    add("true pairs", n(e1["true_pairs"]))
-    add("all possible pairs", n(e1["all_possible_pairs"]))
+    # Each figure is checked in the sentence it is printed in. A bare "74,926"
+    # would be found wherever 74,926 is printed, and underived() would accept
+    # it anywhere, including typed over a different result.
+    rows = n(e1["source_rows"])
+    add("source rows in the introduction",
+        "reproduces the same %s rows byte for byte" % rows)
+    add("source rows, true pairs and possible pairs",
+        "Across all four: %s source rows, %s true pairs, and %s\npossible pairs"
+        % (rows, n(e1["true_pairs"]), n(e1["all_possible_pairs"])))
+    add("possible pairs in billions",
+        "Comparing every pair of %s rows is %.1f billion comparisons"
+        % (rows, e1["all_possible_pairs"] / 1e9))
+    add("source rows in the index table", "| full batch, %s rows |" % rows)
+    add("source rows in the planner prose", "scanning %s rows once" % rows)
+    add("source rows in the limits", "providers and %s rows on local Postgres"
+        % rows)
+    by_source = {r["source_system"]: r for r in e1["blockable_by_source"]}
+    add("license board rows in prose",
+        "any of its %s rows can take part in" % n(by_source["license_board"]["rows"]))
+    add("site scrape rows carrying an NPI",
+        "Only %s of the\nsite scrape's %s rows carry an NPI"
+        % (n(by_source["site_scrape"]["can_block_on_npi"]),
+           n(by_source["site_scrape"]["rows"])))
     for row in e1["blockable_by_source"]:
         s = row["source_system"]
-        add("%s rows" % s, n(row["rows"]))
+        add("%s row in the source table" % s,
+            "| `%s` | %s |" % (s, n(row["rows"])))
         add("%s row/blocking row" % s,
             "| `%s` | %s | %s | %s | %s | %s |"
             % (s, n(row["rows"]), n(row["can_block_on_npi"]),
@@ -143,11 +184,19 @@ def build(readme):
     add("npi completeness in prose", "REFUTED AT %s" % f(npi["pair_completeness"], 4))
     add("npi completeness as a percentage",
         "reaches %s percent of the true" % pct(npi["pair_completeness"]))
+    phone = [s for s in e1["strategies"] if s["strategy"] == "phone_exact"][0]
+    add("npi and phone blocking precision",
+        "produce true pairs %s and %s percent"
+        % (pct(npi["precision_of_blocking"]),
+           pct(phone["precision_of_blocking"], 2)))
     add("prediction threshold", "at least %s percent"
         % pct(e1["prediction"]["threshold"]))
-    add("true pairs found by the union", n(union["true_pairs_found"]))
+    add("prediction threshold in the summary", "not the %s percent predicted"
+        % pct(e1["prediction"]["threshold"]))
     lost = e1["true_pairs"] - union["true_pairs_found"]
-    add("true pairs lost to blocking", "%s true pairs are gone" % n(lost))
+    add("true pairs lost to blocking",
+        "reaches %s of %s true pairs, so %s true pairs are gone"
+        % (n(union["true_pairs_found"]), n(e1["true_pairs"]), n(lost)))
     add("true pairs lost, in the summary", "lose %s pairs" % n(lost))
 
     qp = e1["query_plans"]
@@ -167,10 +216,12 @@ def build(readme):
            f(qp["incremental_no_index"]["50"]["exec_ms"], 3)))
 
     # ---- experiment 2 ------------------------------------------------------
-    add("recall ceiling", f(e2["recall_ceiling_from_blocking"], 4))
-    add("eval pairs scored", n(e2["eval_pairs_scored"]))
-    add("eval true pairs scored", n(e2["eval_true_pairs_scored"]))
-    add("eval true pairs total", n(e2["eval_true_pairs_total"]))
+    add("recall ceiling", "is capped at %s by that alone"
+        % f(e2["recall_ceiling_from_blocking"], 4))
+    add("evaluation pairs",
+        "%s scored pairs covering\n%s of the %s true pairs"
+        % (n(e2["eval_pairs_scored"]), n(e2["eval_true_pairs_scored"]),
+           n(e2["eval_true_pairs_total"])))
 
     for field, label in [("npi", "NPI"), ("street", "street"),
                          ("phone", "phone"), ("zip", "ZIP"),
@@ -180,12 +231,13 @@ def build(readme):
         w = e2["weights"][field]
         add("weight row %s" % field, "| %s | %+.2f | %+.2f |"
             % (label, w["agree"], w["disagree"]))
+    add("surname agreement weight in prose", "worth %.2f bits"
+        % e2["weights"]["family_name"]["agree"])
 
     f1 = e2["f1_optimal"]
-    add("f1 threshold", f(f1["threshold"], 3))
-    add("f1 precision and recall",
-        "precision %s and recall %s" % (f(f1["precision"], 4),
-                                        f(f1["recall"], 4)))
+    add("f1 threshold, precision and recall",
+        "The F1-optimal threshold is %s, with precision %s and recall %s"
+        % (f(f1["threshold"], 3), f(f1["precision"], 4), f(f1["recall"], 4)))
     ratio_label = {"1": "1:1", "3": "3:1", "10": "10:1", "30": "30:1"}
     for r in ("1", "3", "10", "30"):
         c = e2["cost_optimal"][r]
@@ -199,21 +251,26 @@ def build(readme):
             % (ratio_label[r], f(c["cost_optimal"]["threshold"], 3),
                n(c["cost_optimal"]["cost"]),
                n(c["cost_at_f1_optimal_threshold"]["cost"]), tail))
-    add("threshold movement at 10:1",
-        "moves the optimal threshold by %s points"
-        % f(e2["cost_optimal"]["10"]["threshold_moved_by"], 1))
+    free = [ratio_label[r] for r in ("1", "3", "10", "30")
+            if not e2["cost_optimal"][r]["extra_cost_of_choosing_by_f1"]]
+    add("ratios at which F1 is optimal",
+        "AT %s the F1 choice is exactly optimal" % " AND ".join(free))
+
+    def penalty(r):
+        c = e2["cost_optimal"][r]
+        return pct(c["extra_cost_of_choosing_by_f1"]
+                   / float(c["cost_optimal"]["cost"]))
+    add("the priced threshold in the summary",
+        "at %s times a missed one moves the optimal threshold by %s points and "
+        "makes the\nF1-optimal choice cost %s percent more; at %s it costs %s "
+        "percent more"
+        % (e2["multi_provider"]["priced_at_ratio"],
+           f(e2["cost_optimal"]["10"]["threshold_moved_by"], 1),
+           penalty("10"), ratio_label["30"], penalty("30")))
     add("threshold movement in section 2",
         "The\nthreshold moves %s points at 10:1 and %s at 30:1"
         % (f(e2["cost_optimal"]["10"]["threshold_moved_by"], 1),
            f(e2["cost_optimal"]["30"]["threshold_moved_by"], 1)))
-    for r in ("10", "30"):
-        c = e2["cost_optimal"][r]
-        add("f1 penalty percentage at %s:1" % r, "cost %s percent\nmore"
-            % pct(c["extra_cost_of_choosing_by_f1"]
-                  / float(c["cost_optimal"]["cost"]))
-            if r == "10" else "costs %s percent\nmore"
-            % pct(c["extra_cost_of_choosing_by_f1"]
-                  / float(c["cost_optimal"]["cost"])))
 
     # cluster damage. WHICH rows are published is read out of the README
     # (see published_table_rows); every one of the 13 result rows gets a label,
@@ -274,6 +331,11 @@ def build(readme):
     c10 = e2["cost_optimal"]["10"]["cost_optimal"]
     add("precision at the operating point", "Precision is\n%s"
         % f(c10["precision"], 4))
+    # The same precision as a reader would round it, in the sentence that
+    # warns against that reading.
+    add("precision as a reader rounds it",
+        "takes precision %s and infers that %s percent"
+        % (f(c10["precision"], 3), f((1.0 - c10["precision"]) * 100.0, 1)))
     add("false share as a percentage in prose", "so %s percent of accepted"
         % pct(at10["false_pair_share_of_accepted"], 2))
     add("welded providers in prose", "But %s of the %s"
@@ -283,11 +345,18 @@ def build(readme):
         % pct(at10["welded_provider_share"], 2))
     worst_loose = [d for d in e2["cluster_damage"] if d["threshold"] == -8.0][0]
     add("error factor between the operating point and -8",
-        "factor of %.0f between the" % (worst_loose["false_pair_share_of_accepted"]
-                                        / at10["false_pair_share_of_accepted"]))
+        "factor of %.0f between the operating point and %s"
+        % (worst_loose["false_pair_share_of_accepted"]
+           / at10["false_pair_share_of_accepted"],
+           f(worst_loose["threshold"], 3)))
+    add("the loose threshold in prose", "by %s a single cluster is"
+        % f(worst_loose["threshold"], 3))
     worst_20 = [d for d in e2["cluster_damage"] if d["threshold"] == -20.0][0]
-    add("worst cluster at -20", "about %s different"
-        % n(worst_20["most_providers_in_one_cluster"]))
+    add("worst cluster at -20", "At %s a single cluster is\nabout %s different"
+        % (f(worst_20["threshold"], 3),
+           n(worst_20["most_providers_in_one_cluster"])))
+    op_ratio = e2["multi_provider"]["priced_at_ratio"]
+    add("the operating point's ratio", "At the %s:1\noperating point" % op_ratio)
 
     # the review band
     # The label is derived from the width (see width_label), not looked up in
@@ -314,12 +383,18 @@ def build(readme):
               if b["band_width_fraction_of_score_range"] == 0.02][0]
     ten = [b for b in e2["review_band"]["bands"]
            if b["band_width_fraction_of_score_range"] == 0.1][0]
-    add("narrow band queue in prose", "puts %s pairs per 10,000"
-        % n(narrow["review_queue_pairs"]))
+    per = n(e2["review_band"]["eval_providers"])
+    add("the band's price", "Priced at %s:1, with the band centered"
+        % e2["review_band"]["priced_at_ratio"])
+    add("the band table's per-provider column",
+        "| Review queue | Reviews per %s providers |" % per)
+    add("narrow band queue in prose", "puts %s pairs per %s providers"
+        % (n(narrow["review_queue_pairs"]), per))
     add("narrow band break-even in prose", "at most %s of one missed match"
         % f(narrow["break_even_review_cost"], 2))
-    add("ten percent band in prose", "cost down to %s takes %s reviews"
-        % (n(ten["expected_cost"]), n(ten["review_queue_pairs"])))
+    add("ten percent band in prose",
+        "cost\ndown to %s takes %s reviews per %s providers"
+        % (n(ten["expected_cost"]), n(ten["review_queue_pairs"]), per))
 
     # ---- experiment 3 ------------------------------------------------------
     field_label = [("npi", "NPI"), ("first_name", "first name"),
@@ -336,7 +411,8 @@ def build(readme):
                                  for s in order)))
     add("survivorship mean row", "| **mean** | %s |"
         % " | ".join("**%s**" % f(e3["mean_accuracy"][s], 4) for s in order))
-    add("clusters scored", n(e3["clusters_scored"]))
+    add("clusters scored", "over the %s clusters that are about exactly"
+        % n(e3["clusters_scored"]))
     add("welded clusters excluded", "The %s welded"
         % n(e3["clusters_skipped_as_welded"]))
     add("two-site providers", "Of the 20,000 providers, %s"
@@ -365,6 +441,9 @@ def build(readme):
         % (f(ss["majority_vote"]["last_name"], 4),
            f(ss["source_priority"]["last_name"], 4)))
 
+    add("the operating threshold in the limits", "takes %s away"
+        % f(c10["threshold"], 3))
+
     # ---- experiment 4 ------------------------------------------------------
     o = e4["overrides"]
     add("override counts", "%s decisions the pipeline could not: %s"
@@ -386,6 +465,8 @@ def build(readme):
     add("misapplied count repeated", "Every one of those %s landed"
         % n(ci["misapplied"]))
     add("retained count in prose", "The %s that survived" % n(ci["retained"]))
+    add("misapplied count against the survivors",
+        "distinguishes them from the %s:" % n(ci["misapplied"]))
     add("retained share in prose", "right %s percent\nof the time by accident"
         % pct(ci["retained"] / float(o["total"])))
     add("misapplied in the summary", "And %s of %s human overrides"
@@ -405,6 +486,10 @@ def build(readme):
     add("ids holding nothing",
         "%s hold no cluster at all"
         % n(e4["run1_cluster_ids_with_no_cluster_at_that_id"]))
+    add("clusters the second run ends without", "ends with %s fewer clusters"
+        % n(e4["ingest1"]["clusters"] - e4["ingest1_plus_2"]["clusters"]))
+    add("change percentage against the renumbering",
+        "A %s percent change in the data" % pct(changed / float(total_c)))
     add("renumbering factor", "move %s times as many ids"
         % {2: "two", 3: "three", 4: "four", 5: "five"}[round(renum / changed)])
     add("change percentage in the summary", "only %s\npercent of clusters"
@@ -432,9 +517,158 @@ def build(readme):
     return want, orphans
 
 
-def main():
+#: Figures the README states that no results file holds, each keyed by the
+#: words around it and given the reason it is not derived. The key is a
+#: sentence fragment and not a bare figure: a bare "50" would excuse a 50
+#: anywhere in the README, including one typed over a result.
+NOT_DERIVED = {
+    "Python 3.11 or later": "the minimum Python version",
+    "a single Postgres 17": "the Postgres major version",
+    "about 3 GB of free memory": "a memory budget, measured by hand",
+    "holds 4.1 million candidate pairs":
+        "candidate pairs the replay holds, from the SAMPLE_RUN capture",
+    "a peak of 2.2 GB": "a memory peak measured by hand, not recorded in results/",
+    "peak at 0.9 GB": "a memory peak measured by hand, not recorded in results/",
+    "the same 20,000 doctors": "the generator's provider count, a parameter",
+    "The world holds 20,000 canonical": "the generator's provider count, a parameter",
+    "Of the 20,000 providers": "the generator's provider count, a parameter",
+    "One scale, one machine. 20,000 providers":
+        "the generator's provider count, a parameter",
+    "NPI absent on 15% of rows": "a generator rate, which is a parameter",
+    "state mistyped on 1.5%": "a generator rate, which is a parameter",
+    "NPI absent on 30%": "a generator rate, which is a parameter",
+    "NPI on 20%": "a generator rate, which is a parameter",
+    "the 12% of providers who moved": "a generator rate, which is a parameter",
+    "3 percent of rows carry a surname typo":
+        "a generator rate, which is a parameter",
+    "2 percent a given-name typo": "a generator rate, which is a parameter",
+    "2.5 percent of providers": "a generator rate, which is a parameter",
+    "a 3 percent typo rate": "a generator rate, which is a parameter",
+    "correction file, 50 rows": "a correction file size, a parameter",
+    "correction file, 1,000 rows": "a correction file size, a parameter",
+    "At 50 probe rows": "a correction file size, a parameter",
+    "At 1,000 it declines": "a correction file size, a parameter",
+    "cheaper than 1,000 index descents": "a correction file size, a parameter",
+    "right 90 percent of the time buys roughly 90 percent":
+        "an illustration of the reviewer assumption, not a measurement",
+    "raise max_prefix to 11": "the max_prefix value a mutation sets",
+    "push a similarity above 1": "the ceiling of a similarity, a constant",
+    "20,000 providers hold 20,000 distinct NPIs":
+        "the generator's provider count, a parameter",
+    "costs money at 10:1": "the ratio the named test is written for",
+    "run 2 is clustered over both batches, so every batch-1 key":
+        "a run number and a batch number",
+    "the preparation for experiment 4": "an experiment number",
+    "fails at 19,998": "what a mutation produces, not what the run measured",
+    "over the 80840 prefix": "the Luhn prefix constant for NPIs",
+    "completeness reads 2.6634":
+        "what a mutation produces, not what the run measured",
+    "measured against this tree on 2026-09-14": "a date",
+    "`lost 0`": "the structural zero the row explains, derived in the "
+                "replay table above",
+    "## 1. What blocking": "a section number",
+    "## 2. The threshold": "a section number",
+    "## 3. Survivorship": "a section number",
+    "Recall in section 2": "a section number",
+    "the weights in section 2": "a section number",
+    "The review band in section 2": "a section number",
+    "the overrides in section 4": "a section number",
+    "the milliseconds in section 1": "a section number",
+    "for the same reason section 2": "a section number",
+    "1. What does blocking throw": "a list number",
+    "2. Where is the threshold": "a list number",
+    "3. Which survivorship rule": "a list number",
+    "4. Does a human override survive":
+        "a list number, and the heading of section 4",
+}
+
+_FIGURE = re.compile(r"(?<![\w.,])\d[\d,]*(?:\.\d+)?")
+
+
+def places(s):
+    """Whether a string can say WHERE in the README its figures belong.
+
+    A bare figure cannot: "271" is found wherever 271 is printed, so it would
+    vouch for a 271 typed over any other result. A string with words around
+    its figure, or several figures in a fixed order, matches one place.
+    """
+    rest = _FIGURE.sub("", s)
+    return len(_FIGURE.findall(s)) != 1 or bool(re.search(r"[A-Za-z]", rest))
+
+
+def unfenced(readme):
+    """The README outside fenced code with each whitespace run collapsed to
+    one space, and the README line number of every character in it."""
+    chars, lines, fenced = [], [], False
+    for number, line in enumerate(readme.split("\n"), 1):
+        if line.lstrip().startswith("```"):
+            fenced = not fenced
+            continue
+        if fenced:
+            continue
+        for ch in line + "\n":
+            if ch.isspace():
+                if chars and chars[-1] == " ":
+                    continue
+                ch = " "
+            chars.append(ch)
+            lines.append(number)
+    return "".join(chars), lines
+
+
+def spans(flat, strings):
+    """(start, end) of every occurrence in `flat` of every string that
+    places() accepts."""
+    out = []
+    for s in strings:
+        s = re.sub(r"\s+", " ", s)
+        if not places(s):
+            continue
+        i = flat.find(s)
+        while i != -1:
+            out.append((i, i + len(s)))
+            i = flat.find(s, i + 1)
+    return out
+
+
+def underived(readme, want):
+    """Figures in the README, outside fenced code, that sit inside no
+    occurrence of a string build() derived and no NOT_DERIVED fragment.
+    Each is (line number, figure).
+
+    Position, not membership. A figure is covered only where a derived
+    string puts it: the digits of a result printed somewhere else do not
+    cover a copy of them typed into a different sentence.
+    """
+    flat, lines = unfenced(readme)
+    covered = spans(flat, [s for _, s in want] + list(NOT_DERIVED))
+    found = []
+    for m in _FIGURE.finditer(flat):
+        token = m.group(0).rstrip(",")
+        a, b = m.start(), m.start() + len(token)
+        if not any(x <= a and b <= y for x, y in covered):
+            found.append((lines[a], token))
+    return found
+
+
+def stale_exceptions(readme):
+    """NOT_DERIVED fragments the README no longer contains, or that cannot
+    place a figure. An entry nothing matches is an exception for a sentence
+    that has gone, and would excuse the same words if they came back."""
+    flat, _ = unfenced(readme)
+    return [k for k in NOT_DERIVED
+            if not places(k) or re.sub(r"\s+", " ", k) not in flat]
+
+
+def main(argv=()):
     with open(README, encoding="utf-8") as fh:
         readme = fh.read()
+    if "--emit" in argv:
+        # Every derived string, one per line, whitespace collapsed: what the
+        # checker requires, for a reader or a tool to compare with the page.
+        for _, s in build(readme)[0]:
+            print(re.sub(r"\s+", " ", s))
+        return 0
     # Normalized on both sides so a reflowed paragraph is not a false alarm.
     # A checker that cries wolf on line wrapping is a checker a reader learns
     # to ignore, which is worse than not having one.
@@ -456,6 +690,24 @@ def main():
         print("%d published table row(s) have no results row behind them."
               % len(orphans))
         return 1
+    stale = stale_exceptions(readme)
+    if stale:
+        print()
+        for k in stale:
+            print("STALE EXCEPTION: NOT_DERIVED[%r] matches no sentence in "
+                  "README.md, or names no words around its figure" % k)
+        print()
+        print("%d NOT_DERIVED entr(ies) excuse nothing." % len(stale))
+        return 1
+    stray = underived(readme, want)
+    if stray:
+        print()
+        for number, token in stray:
+            print("NOT DERIVED: README.md:%d %s" % (number, token))
+        print()
+        print("%d figure(s) in README.md sit in no sentence a derived string "
+              "or a NOT_DERIVED entry places them in." % len(stray))
+        return 1
     if missing:
         print()
         for label, s in missing:
@@ -470,4 +722,4 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv[1:]))

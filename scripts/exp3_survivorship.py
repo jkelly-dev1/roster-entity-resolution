@@ -74,7 +74,7 @@ FIELDS = [
 # and the differences between the lists are the entire content of the
 # strategy. Three of them put the clearinghouse first and three put it last.
 PRIORITY = {
-    # Always present and always correct here.
+    # Always present and correct here.
     "npi": ["clearinghouse", "payer_feed", "license_board", "site_scrape"],
     # The licensing board is the only source that carries a legal first name.
     # The other three carry whatever the practice uses, so a majority of three
@@ -219,9 +219,9 @@ def pick_source_priority(cands, field):
     if best is not None:
         return best[1]
     # Nothing the priority list knows about offered a value. Falling through
-    # to most-recent rather than returning nothing: an empty golden field is a
+    # to most-recent instead of returning nothing: an empty golden field is a
     # worse answer than a value from an unranked source, and pretending the
-    # list is exhaustive is how a priority scheme quietly loses fields.
+    # list is exhaustive is how a priority scheme silently loses fields.
     return pick_most_recent(cands)
 
 
@@ -247,6 +247,7 @@ def resolve(cands, field, strategy):
 
 def main():
     t0 = time.time()
+    lab.require_first_ingest_only("exp3_survivorship")
 
     exp2 = lab.read_result("exp2_threshold")
     dmg = [d for d in exp2["cluster_damage"]
@@ -260,7 +261,7 @@ def main():
     print("clustering at the %s threshold %.3f" % (OPERATING_POINT, threshold))
 
     # The clusters come from the same code path experiment 2 measured, by
-    # importing it rather than restating it. A second implementation of
+    # importing it instead of restating it. A second implementation of
     # connected components would be a second thing to keep correct, and the
     # two drifting apart would make every number here describe a clustering
     # the published damage figures never applied to.
@@ -306,7 +307,7 @@ def main():
 
     # Providers a source lists twice at two practice locations. A single
     # golden address is the wrong data model for them and address accuracy is
-    # reported separately with and without them, rather than blaming a
+    # reported separately with and without them, instead of blaming a
     # survivorship rule for a question that has two right answers.
     two_site = {r["provider_id"] for r in lab.query_json("""
         SELECT provider_id FROM truth.source_row_link

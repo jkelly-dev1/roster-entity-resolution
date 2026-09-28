@@ -1,7 +1,7 @@
 # WHAT IS DELIBERATELY TRACKED, so that a later edit has to argue with a
 # sentence before it can drop it:
 #
-#   results/*.json   THE EVIDENCE. Every number in README.md is derived from
+#   results/*.json   THE EVIDENCE. Every result in README.md is derived from
 #                    these by scripts/check_readme_numbers.py, and the test
 #                    suite asserts against them. A repository that ignored
 #                    them would pass every existence check and be useless.

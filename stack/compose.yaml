@@ -4,10 +4,11 @@
 # password to start and the scripts need the same one to reach it. The port is
 # bound to loopback. They are fixtures, not secrets.
 #
-# The port is deliberately unusual. Postgres's own default of 5432 is one of
-# the most commonly occupied ports on a developer machine, and a script that
-# silently connects to a DIFFERENT Postgres would load 71,000 rows into
-# somebody else's database. Nothing here uses a default port.
+# The port is unusual. Postgres's own default of 5432 is one of the most
+# commonly occupied ports on a developer machine. The scripts do not use the
+# port at all: every call goes through `docker exec reg-postgres`, so they
+# cannot reach a different Postgres. The binding is there for a person with a
+# client, and it avoids colliding with one already on 5432.
 #
 # The project name is explicit, and it has to be. Compose derives the project
 # name from the CONTAINING DIRECTORY when you do not set one, and this file
